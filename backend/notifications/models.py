@@ -6,9 +6,7 @@ from clearance.models import Clearance, Issue
 
 class Notification(models.Model):
     class Type(models.TextChoices):
-        INFO = 'INFO', 'Info'
-        SUCCESS = 'SUCCESS', 'Success'
-        WARNING = 'WARNING', 'Warning'
+        CLEARANCE = 'CLEARANCE', 'Clearance'
         ISSUE = 'ISSUE', 'Issue'
 
     user = models.ForeignKey(
@@ -21,10 +19,10 @@ class Notification(models.Model):
 
     type = models.CharField(
         max_length=20, choices=Type.choices,
-        default=Type.INFO,
+        default=Type.CLEARANCE,
     )
 
-    read = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)
 
     clearance = models.ForeignKey(
         Clearance, on_delete=models.CASCADE,

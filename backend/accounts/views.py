@@ -2,8 +2,16 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import NotFound
 
-from .serializers import CurrentUserSerializer, LoginSerializer
+from .models import Staff, Student, User
+from .permissions import IsStudent
+from .serializers import (
+    CurrentUserSerializer,
+    LoginSerializer,
+    StaffProfileSerializer,
+    StudentProfileSerializer,
+)
 
 
 class LoginView(APIView):
@@ -21,3 +29,33 @@ class CurrentUserView(APIView):
         serializer = CurrentUserSerializer(request.user)
 
         return Response(serializer.data)
+    
+class CurrentUserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if user.role == User.Role.STUDENT:
+            try:
+                profile = user.student_profile
+            except Student.DoesNotExist:
+                raise NotFound('Student profile not found.')
+
+            serializer = StudentProfileSerializer(profile)
+            return Response(serializer.data)
+
+        if user.role in [
+            User.Role.OFFICER,
+            User.Role.REGISTRAR,
+            User.Role.ADMIN,
+        ]:
+            try:
+                profile = user.staff_profile
+            except Staff.DoesNotExist:
+                raise NotFound('Staff profile not found.')
+
+            serializer = StaffProfileSerializer(profile)
+            return Response(serializer.data)
+
+        raise NotFound('Profile not found.')

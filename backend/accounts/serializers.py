@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import Staff, Student, User
 
 
 class LoginSerializer(serializers.Serializer):
@@ -23,12 +23,26 @@ class LoginSerializer(serializers.Serializer):
 
         refresh = RefreshToken.for_user(user)
 
-        return {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        }
+        return {'refresh': str(refresh), 'access': str(refresh.access_token), }
         
 class CurrentUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'university_id', 'username', 'role']
+        fields = ['id', 'university_id', 'username', 'email', 'first_name', 'last_name' , 'role']
+        
+class StudentProfileSerializer(serializers.ModelSerializer):
+    faculty = serializers.CharField(source='faculty.name')
+    department = serializers.CharField(source='department.name')
+    section = serializers.CharField(source='section.name')
+
+    class Meta:
+        model = Student
+        fields = ['student_id', 'full_name', 'faculty', 'department', 'section', 'year',  'email', 'phone', ]
+        read_only_fields = fields
+
+
+class StaffProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Staff
+        fields = ['employee_id', 'full_name', 'email', 'phone', 'is_active', ]
+        read_only_fields = fields
