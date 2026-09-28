@@ -56,7 +56,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
-AUTH_USER_MODEL = 'accounts.User'
 
 TEMPLATES = [
     {
@@ -132,6 +131,15 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# Custom configuration
+AUTH_USER_MODEL = 'accounts.User'
+
+
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.UniversityIDBackend',
+]
 
 
 REST_FRAMEWORK = {
