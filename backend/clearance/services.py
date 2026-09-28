@@ -153,7 +153,63 @@ class ClearanceService:
                 description=issue_description,
                 created_by=officer,
             )
+            
+        ClearanceService.update_clearance_status(clearance_office.clearance )
 
         return clearance_office
     
+    @staticmethod
+    @transaction.atomic
+    def resolve_issue(*, issue: Issue, user, resolution_note, ):
+        if issue.status != Issue.Status.OPEN:
+            raise ValidationError('This issue is not open.' )
+
+        if not resolution_note:
+            raise ValidationError('Resolution note is required.' )
+
+        issue.status = Issue.Status.RESOLVED
+        issue.resolved_by = user
+        issue.resolution_note = resolution_note
+        issue.resolved_at = timezone.now()
+
+        issue.save(
+            update_fields=['status', 'resolved_by', 'resolution_note', 'resolved_at', ] )
+
+        issue.clearance_office.status = (ClearanceOffice.Status.PENDING )
+        issue.clearance_office.notes = ''
+        issue.clearance_office.reviewed_at = None
+
+        issue.clearance_office.save(
+            update_fields=['status', 'notes', 'reviewed_at', ] )
+
+        return issue
     
+    @staticmethod
+    def update_clearance_status(clearance):
+        offices = clearance.clearance_offices.all()
+
+        if not offices.exists():
+            return clearance
+
+        if all(
+            office.status == ClearanceOffice.Status.CLEARED
+            for office in offices
+        ):
+            clearance.status = Clearance.Status.PENDING_REGISTRAR
+            clearance.submitted_at = timezone.now()
+
+            clearance.save(update_fields=[ 'status', 'submitted_at', ] )
+
+        elif any(
+            office.status in [
+                ClearanceOffice.Status.CLEARED,
+                ClearanceOffice.Status.FLAGGED,
+            ]
+            for office in offices
+        ):
+            if clearance.status == Clearance.Status.INITIATED:
+                clearance.status = Clearance.Status.IN_PROGRESS
+
+                clearance.save(update_fields=['status']  )
+
+        return clearance

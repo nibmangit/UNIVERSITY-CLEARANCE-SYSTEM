@@ -2,20 +2,27 @@ from rest_framework import serializers
 
 from accounts.models import Student
 from .services import ClearanceService
-from .models import Clearance, ClearanceOffice, ClearanceType
+from .models import Clearance, ClearanceOffice, ClearanceType, Issue
 
 
+class IssueSerializer(serializers.ModelSerializer):
+    created_by = serializers.CharField(source='created_by.username', allow_null=True, )
+    resolved_by = serializers.CharField(source='resolved_by.username', allow_null=True, )
+
+    class Meta:
+        model = Issue
+        fields = [ 'id', 'reason', 'description', 'status', 'created_by', 'resolved_by', 'resolution_note', 'created_at', 'resolved_at', ]
+        read_only_fields = fields
+        
 class ClearanceOfficeSerializer(serializers.ModelSerializer):
     office = serializers.CharField(source='office.name')
-    assigned_officer = serializers.CharField(
-        source='assigned_officer.full_name',
-        allow_null=True,
-    )
+    assigned_officer = serializers.CharField(source='assigned_officer.full_name',  allow_null=True, )
+    issues = IssueSerializer(many=True, read_only=True, )
 
     class Meta:
         model = ClearanceOffice
         fields = [
-            'id', 'office', 'assigned_officer',
+            'id', 'office', 'assigned_officer', 'issues',
             'status', 'notes', 'reviewed_at',
         ]
         read_only_fields = fields
@@ -76,3 +83,6 @@ class ClearanceOfficeProcessSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False,  allow_blank=True, )
     issue_reason = serializers.CharField(required=False,  allow_blank=True, )
     issue_description = serializers.CharField(required=False, allow_blank=True, )
+    
+class IssueResolveSerializer(serializers.Serializer):
+    resolution_note = serializers.CharField()

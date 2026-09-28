@@ -1,13 +1,13 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied
 
-from .models import ClearanceOffice
+from .models import ClearanceOffice, Issue
 from .services import ClearanceService
 
 from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
-from .serializers import ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeSerializer, ClearanceSerializer
+from .serializers import ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer
 
 
 class ClearanceListView(APIView):
@@ -72,3 +72,36 @@ class ClearanceOfficeProcessView(APIView):
         response_serializer =   ClearanceOfficeSerializer(clearance_office )
 
         return Response(response_serializer.data)
+
+class ResolveIssueView(APIView):
+    permission_classes = [IsAuthenticated, IsOfficer]
+
+    def patch(self, request, pk):
+        try:
+            issue = (Issue.objects.select_related('clearance_office', 'clearance_office__assigned_officer', ).get(pk=pk) )
+        except Issue.DoesNotExist:
+            raise NotFound('Issue not found.')
+
+        if ( issue.clearance_office.assigned_officer_id
+             != request.user.staff_profile.id ):
+            raise PermissionDenied('You are not assigned to this issue.' )
+
+        serializer = IssueResolveSerializer(data=request.data )
+        serializer.is_valid(raise_exception=True)
+
+        issue = ClearanceService.resolve_issue(
+            issue=issue,
+            user=request.user,
+            resolution_note=serializer.validated_data['resolution_note' ],
+        )
+
+        return Response({
+            'id': issue.id,
+            'status': issue.status,
+            'resolution_note': issue.resolution_note,
+            'resolved_by': issue.resolved_by.id,
+            'resolved_at': issue.resolved_at,
+            'clearance_office_status': (
+                issue.clearance_office.status
+            ),
+        })
