@@ -2,8 +2,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsStudent
-from .serializers import ClearanceSerializer
+from accounts.permissions import IsRegistrar, IsStudent
+from .serializers import ClearanceCreateSerializer, ClearanceSerializer
 
 
 class ClearanceListView(APIView):
@@ -22,3 +22,21 @@ class ClearanceListView(APIView):
         serializer = ClearanceSerializer(clearances, many=True)
 
         return Response(serializer.data)
+    
+
+class ClearanceCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def post(self, request):
+        serializer = ClearanceCreateSerializer(
+            data=request.data,
+            context={'request': request},
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        clearance = serializer.save()
+
+        response_serializer = ClearanceSerializer(clearance)
+
+        return Response(response_serializer.data, status=201, )
