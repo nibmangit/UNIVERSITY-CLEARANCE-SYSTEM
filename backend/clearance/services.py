@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
@@ -129,3 +131,22 @@ class ClearanceService:
             )
 
         return clearance
+    
+    @staticmethod
+    @transaction.atomic
+    def process_office(*, clearance_office: ClearanceOffice, officer, status, notes='', ):
+        if clearance_office.assigned_officer_id != officer.staff_profile.id:
+            raise ValidationError('You are not assigned to this clearance office.' )
+
+        if clearance_office.status != ClearanceOffice.Status.PENDING:
+            raise ValidationError('This office has already been processed.' )
+
+        if status not in [ClearanceOffice.Status.CLEARED, ClearanceOffice.Status.FLAGGED, ]:
+            raise ValidationError('Invalid office status.' )
+
+        clearance_office.status = status
+        clearance_office.notes = notes
+        clearance_office.reviewed_at = timezone.now()
+        clearance_office.save(update_fields=[ 'status', 'notes', 'reviewed_at', ] )
+
+        return clearance_office

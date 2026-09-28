@@ -1,9 +1,13 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import NotFound
 
-from accounts.permissions import IsRegistrar, IsStudent
-from .serializers import ClearanceCreateSerializer, ClearanceSerializer
+from .models import ClearanceOffice
+from .services import ClearanceService
+
+from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
+from .serializers import ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeSerializer, ClearanceSerializer
 
 
 class ClearanceListView(APIView):
@@ -40,3 +44,29 @@ class ClearanceCreateView(APIView):
         response_serializer = ClearanceSerializer(clearance)
 
         return Response(response_serializer.data, status=201, )
+    
+class ClearanceOfficeProcessView(APIView):
+    permission_classes = [IsAuthenticated, IsOfficer]
+
+    def patch(self, request, pk):
+        try:
+            clearance_office = (
+                ClearanceOffice.objects
+                .select_related('clearance', 'office', 'assigned_officer', ).get(pk=pk)
+            )
+        except ClearanceOffice.DoesNotExist:
+            raise NotFound('Clearance office not found.')
+
+        serializer = ClearanceOfficeProcessSerializer(data=request.data )
+        serializer.is_valid(raise_exception=True)
+
+        clearance_office = ClearanceService.process_office(
+            clearance_office=clearance_office,
+            officer=request.user,
+            status=serializer.validated_data['status'],
+            notes=serializer.validated_data.get('notes', ''),
+        )
+
+        response_serializer =   ClearanceOfficeSerializer(clearance_office )
+
+        return Response(response_serializer.data)

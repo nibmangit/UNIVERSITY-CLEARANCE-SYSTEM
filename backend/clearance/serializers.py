@@ -65,3 +65,12 @@ class ClearanceCreateSerializer(serializers.Serializer):
             clearance_type=validated_data['clearance_type'],
             initiated_by=self.context['request'].user,
         )
+    
+class ClearanceOfficeProcessSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=[
+            ClearanceOffice.Status.CLEARED,
+            ClearanceOffice.Status.FLAGGED,
+        ]
+    )
+    notes = serializers.CharField(required=False,  allow_blank=True, )
