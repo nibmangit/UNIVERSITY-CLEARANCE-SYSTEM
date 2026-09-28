@@ -74,3 +74,5 @@ class ClearanceOfficeProcessSerializer(serializers.Serializer):
         ]
     )
     notes = serializers.CharField(required=False,  allow_blank=True, )
+    issue_reason = serializers.CharField(required=False,  allow_blank=True, )
+    issue_description = serializers.CharField(required=False, allow_blank=True, )

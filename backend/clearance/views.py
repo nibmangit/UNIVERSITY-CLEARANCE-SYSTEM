@@ -65,6 +65,8 @@ class ClearanceOfficeProcessView(APIView):
             officer=request.user,
             status=serializer.validated_data['status'],
             notes=serializer.validated_data.get('notes', ''),
+            issue_reason=serializer.validated_data.get('issue_reason', ''),
+            issue_description=serializer.validated_data.get('issue_description', ''),
         )
 
         response_serializer =   ClearanceOfficeSerializer(clearance_office )

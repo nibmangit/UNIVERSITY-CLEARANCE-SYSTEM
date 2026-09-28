@@ -8,6 +8,7 @@ from .models import (
     Clearance,
     ClearanceOffice,
     ClearanceType,
+    Issue,
     Office,
     OfficeAssignment,
 )
@@ -80,20 +81,10 @@ class ClearanceService:
         ).exists()
 
         if already_active:
-            raise ValidationError(
-                'This student already has an active clearance '
-                'of this type.'
-            )
+            raise ValidationError('This student already has an active clearance of this type.'  )
 
-        offices = Office.objects.filter(
-            code__in=ClearanceService.REQUIRED_OFFICE_CODES,
-            is_active=True,
-        )
-
-        office_map = {
-            office.code: office
-            for office in offices
-        }
+        offices = Office.objects.filter(code__in=ClearanceService.REQUIRED_OFFICE_CODES, is_active=True, )
+        office_map = {office.code: office for office in offices }
 
         missing_offices = [
             code
@@ -134,7 +125,7 @@ class ClearanceService:
     
     @staticmethod
     @transaction.atomic
-    def process_office(*, clearance_office: ClearanceOffice, officer, status, notes='', ):
+    def process_office(*, clearance_office: ClearanceOffice, officer, status, notes='', issue_reason='', issue_description=''):
         if clearance_office.assigned_officer_id != officer.staff_profile.id:
             raise ValidationError('You are not assigned to this clearance office.' )
 
@@ -148,5 +139,21 @@ class ClearanceService:
         clearance_office.notes = notes
         clearance_office.reviewed_at = timezone.now()
         clearance_office.save(update_fields=[ 'status', 'notes', 'reviewed_at', ] )
+        
+        if status == ClearanceOffice.Status.FLAGGED:
+            if not issue_reason:
+                raise ValidationError('Issue reason is required when flagging an office.')
+
+            if not issue_description:
+                raise ValidationError('Issue description is required when flagging an office.' )
+
+            Issue.objects.create(
+                clearance_office=clearance_office,
+                reason=issue_reason,
+                description=issue_description,
+                created_by=officer,
+            )
 
         return clearance_office
+    
+    
