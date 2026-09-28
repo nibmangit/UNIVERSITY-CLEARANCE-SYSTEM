@@ -59,3 +59,4 @@ class CurrentUserProfileView(APIView):
             return Response(serializer.data)
 
         raise NotFound('Profile not found.')
+    
