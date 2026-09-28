@@ -3,11 +3,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound, PermissionDenied
 
-from .models import ClearanceOffice, Issue
+from .models import Clearance, Clearance, ClearanceOffice, Issue
 from .services import ClearanceService
 
 from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
-from .serializers import ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer
+from .serializers import (
+    ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeProcessSerializer, 
+    ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer
+    )
 
 
 class ClearanceListView(APIView):
@@ -105,3 +108,19 @@ class ResolveIssueView(APIView):
                 issue.clearance_office.status
             ),
         })
+        
+class FinalApproveClearanceView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def patch(self, request, pk):
+        try:
+            clearance = (Clearance.objects.prefetch_related('clearance_offices').get(pk=pk) )
+        except Clearance.DoesNotExist:
+            raise NotFound('Clearance not found.')
+
+        clearance = ClearanceService.final_approve_clearance(clearance=clearance, registrar=request.user,)
+
+        serializer = ClearanceSerializer(clearance)
+
+        return Response(serializer.data)
+

@@ -26,41 +26,6 @@ class ClearanceService:
     ]
 
     @staticmethod
-    def _get_assigned_officer(*, office, student):
-        assignments = OfficeAssignment.objects.filter(
-            office=office,
-            is_active=True,
-        ).select_related('staff')
-
-        if office.code == 'ADVISOR':
-            assignment = assignments.filter(
-                faculty=student.faculty,
-                department=student.department,
-                section=student.section,
-            ).first()
-
-        elif office.code == 'FACULTY_STORE':
-            assignment = assignments.filter(
-                faculty=student.faculty,
-                department__isnull=True,
-                section__isnull=True,
-            ).first()
-
-        else:
-            assignment = assignments.filter(
-                faculty__isnull=True,
-                department__isnull=True,
-                section__isnull=True,
-            ).first()
-
-        if assignment is None:
-            raise ValidationError(
-                f'No active officer assignment found for {office.name}.'
-            )
-
-        return assignment.staff
-
-    @staticmethod
     @transaction.atomic
     def create_clearance(
         *,
@@ -184,6 +149,38 @@ class ClearanceService:
 
         return issue
     
+    
+    @staticmethod
+    @transaction.atomic
+    def final_approve_clearance(*, clearance: Clearance, registrar, ):
+        if registrar.role != registrar.Role.REGISTRAR:
+            raise ValidationError('Only a registrar can approve a clearance.')
+
+        if clearance.status != Clearance.Status.PENDING_REGISTRAR:
+            raise ValidationError('This clearance is not pending registrar approval.' )
+
+        offices = clearance.clearance_offices.all()
+
+        if not offices.exists():
+            raise ValidationError('This clearance has no office records.' )
+
+        if not all(
+            office.status == ClearanceOffice.Status.CLEARED
+            for office in offices
+        ):
+            raise ValidationError('All offices must be cleared before final approval.' )
+
+        now = timezone.now()
+
+        clearance.status = Clearance.Status.COMPLETED
+        clearance.final_approved_by = registrar
+        clearance.final_approved_at = now
+        clearance.completed_at = now
+
+        clearance.save(update_fields=['status', 'final_approved_by', 'final_approved_at', 'completed_at', ] )
+
+        return clearance
+    
     @staticmethod
     def update_clearance_status(clearance):
         offices = clearance.clearance_offices.all()
@@ -213,3 +210,38 @@ class ClearanceService:
                 clearance.save(update_fields=['status']  )
 
         return clearance
+    
+    @staticmethod
+    def _get_assigned_officer(*, office, student):
+        assignments = OfficeAssignment.objects.filter(
+            office=office,
+            is_active=True,
+        ).select_related('staff')
+
+        if office.code == 'ADVISOR':
+            assignment = assignments.filter(
+                faculty=student.faculty,
+                department=student.department,
+                section=student.section,
+            ).first()
+
+        elif office.code == 'FACULTY_STORE':
+            assignment = assignments.filter(
+                faculty=student.faculty,
+                department__isnull=True,
+                section__isnull=True,
+            ).first()
+
+        else:
+            assignment = assignments.filter(
+                faculty__isnull=True,
+                department__isnull=True,
+                section__isnull=True,
+            ).first()
+
+        if assignment is None:
+            raise ValidationError(
+                f'No active officer assignment found for {office.name}.'
+            )
+
+        return assignment.staff
