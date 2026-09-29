@@ -167,3 +167,20 @@ class OfficerClearanceListView(APIView):
         serializer = OfficerClearanceSerializer(clearances, many=True, )
 
         return Response(serializer.data)
+    
+class OfficerIssueListView(APIView):
+    permission_classes = [IsAuthenticated, IsOfficer]
+
+    def get(self, request):
+        issues = (
+            Issue.objects
+            .filter(clearance_office__assigned_officer=request.user.staff_profile
+            ).select_related(
+                'created_by', 'resolved_by', 'clearance_office',
+                'clearance_office__office', 'clearance_office__clearance',
+            ).order_by('-created_at')
+        )
+
+        serializer = IssueSerializer(issues, many=True)
+
+        return Response(serializer.data)
