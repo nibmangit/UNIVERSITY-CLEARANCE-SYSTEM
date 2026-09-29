@@ -41,6 +41,16 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class RegistrarStudentSerializer(serializers.ModelSerializer):
+    faculty = serializers.CharField(source='faculty.name')
+    department = serializers.CharField(source='department.name')
+    section = serializers.CharField(source='section.name')
+
+    class Meta:
+        model = Student
+        fields = ['student_id', 'full_name', 'faculty', 'department', 'section', 'year', 'email', 'phone', ]
+        read_only_fields = fields
+
 class StaffProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Staff

@@ -5,10 +5,11 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
 
 from .models import Staff, Student, User
-from .permissions import IsStudent
+from .permissions import IsRegistrar, IsStudent
 from .serializers import (
     CurrentUserSerializer,
     LoginSerializer,
+    RegistrarStudentSerializer,
     StaffProfileSerializer,
     StudentProfileSerializer,
 )
@@ -60,3 +61,18 @@ class CurrentUserProfileView(APIView):
 
         raise NotFound('Profile not found.')
     
+
+class RegistrarStudentListView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def get(self, request):
+        students = (
+            Student.objects
+            .select_related(
+                'faculty', 'department', 'section',
+            ).order_by('student_id')
+        )
+
+        serializer = RegistrarStudentSerializer(students, many=True, )
+
+        return Response(serializer.data)
