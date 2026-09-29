@@ -11,7 +11,7 @@ from .helper_serializer import IssueSerializer
 from .serializers import (
     ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, 
     ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer, 
-    OfficerClearanceSerializer
+    OfficerClearanceSerializer, RegistrarClearanceSerializer, RegistrarIssueSerializer
     )
 
 
@@ -184,3 +184,50 @@ class OfficerIssueListView(APIView):
         serializer = IssueSerializer(issues, many=True)
 
         return Response(serializer.data)
+    
+class RegistrarClearanceListView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def get(self, request):
+        clearances = (
+            Clearance.objects
+            .select_related(
+                'student', 'student__faculty', 'student__department',
+                'student__section', 'clearance_type', 'initiated_by', 'final_approved_by',
+            ).order_by('-initiated_at')
+        )
+        
+        status_filter = request.query_params.get('status')
+
+        if status_filter:
+            clearances = clearances.filter(status=status_filter)
+
+        serializer = RegistrarClearanceSerializer(clearances, many=True, )
+
+        return Response(serializer.data)
+    
+
+class RegistrarIssueListView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def get(self, request):
+        issues = (
+            Issue.objects
+            .select_related(
+                'created_by',  'resolved_by',
+                'clearance_office',
+                'clearance_office__office',
+                'clearance_office__clearance',
+                'clearance_office__clearance__student',
+                'clearance_office__clearance__student__faculty',
+                'clearance_office__clearance__student__department',
+                'clearance_office__clearance__student__section',
+                'clearance_office__clearance__clearance_type',
+            )
+            .order_by('-created_at')
+        )
+
+        serializer = RegistrarIssueSerializer(issues, many=True)
+        return Response(serializer.data)
+    
+    

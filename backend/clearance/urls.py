@@ -7,6 +7,8 @@ from .views import (
     FinalApproveClearanceView,
     OfficerClearanceListView,
     OfficerIssueListView,
+    RegistrarClearanceListView,
+    RegistrarIssueListView,
     ResolveIssueView,
 )
 
@@ -21,4 +23,7 @@ urlpatterns = [
     
     path('offices/', OfficerClearanceListView.as_view(), name='officer-clearance-list', ),
     path('offices/<int:pk>/', ClearanceOfficeProcessView.as_view(), name='clearance-office-process', ),
+    
+    path('registrar/', RegistrarClearanceListView.as_view(), name='registrar-clearance-list' ),
+    path('registrar/issues/', RegistrarIssueListView.as_view(), name='registrar-issue-list' ),
 ]
