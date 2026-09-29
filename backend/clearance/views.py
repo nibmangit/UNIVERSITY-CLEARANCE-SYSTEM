@@ -8,7 +8,7 @@ from .services import ClearanceService
 
 from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
 from .serializers import (
-    ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, ClearanceOfficeProcessSerializer, 
+    ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, 
     ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer
     )
 
