@@ -192,6 +192,9 @@ class ClearanceService:
     def resolve_issue(*, issue: Issue, user, resolution_note, ):
         if issue.status != Issue.Status.OPEN:
             raise ValidationError('This issue is not open.' )
+        
+        if issue.clearance_office.assigned_officer_id != user.staff_profile.id:
+            raise ValidationError('You are not assigned to this issue.')
 
         if not resolution_note:
             raise ValidationError('Resolution note is required.' )
