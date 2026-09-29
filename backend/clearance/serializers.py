@@ -2,36 +2,32 @@ from rest_framework import serializers
 
 from accounts.models import Student
 from .services import ClearanceService
-from .models import Clearance, ClearanceOffice, ClearanceType, Issue
+from .models import Clearance, ClearanceOffice, ClearanceType
+from .helper_serializer import (
+    ClearanceStudentSerializer, ClearanceTypeSerializer,
+    OfficeSerializer, StaffSerializer, IssueSerializer, SimpleUserSerializer
+    )
 
 
-class IssueSerializer(serializers.ModelSerializer):
-    created_by = serializers.CharField(source='created_by.username', allow_null=True, )
-    resolved_by = serializers.CharField(source='resolved_by.username', allow_null=True, )
-
-    class Meta:
-        model = Issue
-        fields = [ 'id', 'reason', 'description', 'status', 'created_by', 'resolved_by', 'resolution_note', 'created_at', 'resolved_at', ]
-        read_only_fields = fields
-        
 class ClearanceOfficeSerializer(serializers.ModelSerializer):
-    office = serializers.CharField(source='office.name')
-    assigned_officer = serializers.CharField(source='assigned_officer.full_name',  allow_null=True, )
+    office = OfficeSerializer(read_only=True, )
+    assigned_officer = StaffSerializer(read_only=True, allow_null=True, )
     issues = IssueSerializer(many=True, read_only=True, )
-
+    
     class Meta:
         model = ClearanceOffice
         fields = [
-            'id', 'office', 'assigned_officer', 'issues',
-            'status', 'notes', 'reviewed_at',
-        ]
+            'id', 'office', 'assigned_officer', 'status', 
+            'notes', 'reviewed_at', 'issues',
+            ]
         read_only_fields = fields
 
 
 class ClearanceSerializer(serializers.ModelSerializer):
-    student_id = serializers.CharField(source='student.student_id')
-    student_name = serializers.CharField(source='student.full_name')
-    clearance_type = serializers.CharField(source='clearance_type.name')
+    student = ClearanceStudentSerializer(read_only=True)
+    clearance_type = ClearanceTypeSerializer(read_only=True)
+    initiated_by = SimpleUserSerializer(read_only=True)
+    final_approved_by = SimpleUserSerializer(read_only=True, allow_null=True, )
     clearance_offices = ClearanceOfficeSerializer(
         many=True,
         read_only=True,
@@ -40,7 +36,7 @@ class ClearanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clearance
         fields = [
-            'id', 'student_id', 'student_name', 'clearance_type', 'status','initiated_by',
+            'id', 'student', 'clearance_type', 'status','initiated_by',
             'initiated_at', 'final_approved_by', 'final_approved_at', 'completed_at', 'submitted_at', 'clearance_offices', 
             ]
         read_only_fields = fields
