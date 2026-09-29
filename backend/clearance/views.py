@@ -10,7 +10,8 @@ from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
 from .helper_serializer import IssueSerializer
 from .serializers import (
     ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, 
-    ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer
+    ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer, 
+    OfficerClearanceSerializer
     )
 
 
@@ -144,3 +145,25 @@ class FinalApproveClearanceView(APIView):
 
         return Response(serializer.data, )
 
+
+### OFFICER VIEWS ###
+class OfficerClearanceListView(APIView):
+    permission_classes = [IsAuthenticated, IsOfficer]
+
+    def get(self, request):
+        clearances = (
+            ClearanceOffice.objects
+            .filter(assigned_officer=request.user.staff_profile)
+            .select_related(
+                'clearance', 'clearance__student', 'clearance__student__faculty',
+                'clearance__student__department', 'clearance__student__section',
+                'clearance__clearance_type', 'office', 'assigned_officer',
+            ).prefetch_related(
+                'issues__created_by',
+                'issues__resolved_by',
+            ).order_by('-clearance__initiated_at')
+        )
+
+        serializer = OfficerClearanceSerializer(clearances, many=True, )
+
+        return Response(serializer.data)

@@ -82,3 +82,21 @@ class ClearanceOfficeProcessSerializer(serializers.Serializer):
     
 class IssueResolveSerializer(serializers.Serializer):
     resolution_note = serializers.CharField()
+
+
+class OfficerClearanceSerializer(serializers.ModelSerializer):
+    clearance_id = serializers.IntegerField(source='clearance.id', read_only=True, )
+    clearance_status = serializers.CharField(source='clearance.status', read_only=True, )
+    student = ClearanceStudentSerializer( source='clearance.student', read_only=True, )
+    clearance_type = ClearanceTypeSerializer(source='clearance.clearance_type', read_only=True, )
+    office = OfficeSerializer(read_only=True)
+    assigned_officer = StaffSerializer(read_only=True, allow_null=True, )
+    issues = IssueSerializer(many=True, read_only=True, )
+
+    class Meta:
+        model = ClearanceOffice
+        fields = [
+            'id', 'clearance_id', 'clearance_status', 'student', 'clearance_type', 'office',
+            'assigned_officer', 'status', 'notes', 'reviewed_at', 'issues',  
+            ]
+        read_only_fields = fields

@@ -5,6 +5,7 @@ from .views import (
     ClearanceListView,
     ClearanceOfficeProcessView,
     FinalApproveClearanceView,
+    OfficerClearanceListView,
     ResolveIssueView,
 )
 
@@ -12,7 +13,10 @@ from .views import (
 urlpatterns = [
     path('', ClearanceListView.as_view(), name='clearance-list'),
     path('create/', ClearanceCreateView.as_view(), name='clearance-create'),
-    path('offices/<int:pk>/', ClearanceOfficeProcessView.as_view(), name='clearance-office-process', ),
+    
     path('issues/<int:pk>/resolve/', ResolveIssueView.as_view(), name='issue-resolve',),
     path('<int:pk>/approve/', FinalApproveClearanceView.as_view(), name='clearance-final-approve',),
+    
+    path('offices/', OfficerClearanceListView.as_view(), name='officer-clearance-list', ),
+    path('offices/<int:pk>/', ClearanceOfficeProcessView.as_view(), name='clearance-office-process', ),
 ]
