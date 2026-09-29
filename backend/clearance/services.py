@@ -1,9 +1,11 @@
 from django.utils import timezone
 
 from django.db import transaction
+from notifications.models import Notification
 from rest_framework.exceptions import ValidationError
 
-from accounts.models import Student
+from accounts.models import Student, User
+from notifications.services import AuditLogService, NotificationService
 from .models import (
     Clearance,
     ClearanceOffice,
@@ -27,12 +29,7 @@ class ClearanceService:
 
     @staticmethod
     @transaction.atomic
-    def create_clearance(
-        *,
-        student: Student,
-        clearance_type: ClearanceType,
-        initiated_by,
-    ):
+    def create_clearance(*, student: Student, clearance_type: ClearanceType, initiated_by, ):
         active_statuses = [
             Clearance.Status.INITIATED,
             Clearance.Status.IN_PROGRESS,
@@ -85,6 +82,27 @@ class ClearanceService:
                 office=office,
                 assigned_officer=assigned_officer,
             )
+        AuditLogService.log(
+            user=initiated_by,
+            action='REGISTRAR_INITIATED_CLEARANCE',
+            description=(
+                f'Clearance initiated for student '
+                f'{student.student_id}.'
+            ),
+            entity_type='Clearance',
+            entity_id=clearance.id,
+        )
+        
+        NotificationService.create(
+            user=student.user,
+            title='Clearance Initiated',
+            message=(
+                f'Your {clearance_type.name} clearance has been initiated. '
+                f'Please log in to track its progress.'
+            ),
+            notification_type=Notification.Type.CLEARANCE,
+            clearance=clearance,
+        )
 
         return clearance
     
@@ -119,6 +137,52 @@ class ClearanceService:
                 created_by=officer,
             )
             
+            AuditLogService.log(
+                user=officer,
+                action='OFFICER_FLAGGED_OFFICE',
+                description=(
+                    f'{officer.username} flagged the '
+                    f'{clearance_office.office.name} office.'
+                ),
+                entity_type='ClearanceOffice',
+                entity_id=clearance_office.id,
+            )
+            
+            NotificationService.create(
+                user=clearance_office.clearance.student.user,
+                title='Clearance Issue',
+                message=(
+                    f'{clearance_office.office.name} has flagged an issue '
+                    f'with your clearance: {issue_reason}.'
+                ),
+                notification_type=Notification.Type.ISSUE,
+                clearance=clearance_office.clearance,
+            )
+            
+            
+        elif status == ClearanceOffice.Status.CLEARED:
+            AuditLogService.log(
+                user=officer,
+                action='OFFICER_CLEARED_OFFICE',
+                description=(
+                    f'{officer.username} cleared the '
+                    f'{clearance_office.office.name} office.'
+                ),
+                entity_type='ClearanceOffice',
+                entity_id=clearance_office.id,
+            )
+            
+            NotificationService.create(
+                user=clearance_office.clearance.student.user,
+                title='Office Cleared',
+                message=(
+                    f'{clearance_office.office.name} has cleared your '
+                    f'{clearance_office.clearance.clearance_type.name} clearance.'
+                ),
+                notification_type=Notification.Type.CLEARANCE,
+                clearance=clearance_office.clearance,
+            )
+            
         ClearanceService.update_clearance_status(clearance_office.clearance )
 
         return clearance_office
@@ -137,15 +201,38 @@ class ClearanceService:
         issue.resolution_note = resolution_note
         issue.resolved_at = timezone.now()
 
-        issue.save(
-            update_fields=['status', 'resolved_by', 'resolution_note', 'resolved_at', ] )
+        issue.save(update_fields=['status', 'resolved_by', 'resolution_note', 'resolved_at', ] )
+        
+        AuditLogService.log(
+            user=user,
+            action='OFFICER_RESOLVED_ISSUE',
+            description=(
+                f'Issue resolved for '
+                f'{issue.clearance_office.office.name}.'
+            ),
+            entity_type='Issue',
+            entity_id=issue.id,
+        )
+        
+        NotificationService.create(
+            user=issue.clearance_office.clearance.student.user,
+            title='Issue Resolved',
+            message=(
+                f'The issue raised by '
+                f'{issue.clearance_office.office.name} has been resolved. '
+                f'The office can now process your clearance again.'
+            ),
+            notification_type=Notification.Type.ISSUE,
+            clearance=issue.clearance_office.clearance,
+            issue=issue,
+        )
 
         issue.clearance_office.status = (ClearanceOffice.Status.PENDING )
         issue.clearance_office.notes = ''
         issue.clearance_office.reviewed_at = None
 
-        issue.clearance_office.save(
-            update_fields=['status', 'notes', 'reviewed_at', ] )
+        issue.clearance_office.save(update_fields=['status', 'notes', 'reviewed_at', ] )
+        
 
         return issue
     
@@ -178,6 +265,29 @@ class ClearanceService:
         clearance.completed_at = now
 
         clearance.save(update_fields=['status', 'final_approved_by', 'final_approved_at', 'completed_at', ] )
+        
+        AuditLogService.log(
+            user=registrar,
+            action='REGISTRAR_FINAL_APPROVAL',
+            description=(
+                f'Final approval completed for clearance '
+                f'{clearance.id}.'
+            ),
+            entity_type='Clearance',
+            entity_id=clearance.id,
+        )
+        
+        NotificationService.create(
+            user=clearance.student.user,
+            title='Clearance Completed',
+            message=(
+                f'Your {clearance.clearance_type.name} clearance '
+                f'has been completed and approved by the registrar.'
+            ),
+            notification_type=Notification.Type.CLEARANCE,
+            clearance=clearance,
+        )
+
 
         return clearance
     
@@ -196,6 +306,7 @@ class ClearanceService:
             clearance.submitted_at = timezone.now()
 
             clearance.save(update_fields=[ 'status', 'submitted_at', ] )
+            ClearanceService.create_notification_for_status_update(clearance)
 
         elif any(
             office.status in [
@@ -210,6 +321,38 @@ class ClearanceService:
                 clearance.save(update_fields=['status']  )
 
         return clearance
+    
+    @staticmethod
+    def create_notification_for_status_update(clearance):
+        NotificationService.create(
+            user=clearance.student.user,
+            title='Clearance Ready for Final Approval',
+            message=(
+                'All required offices have cleared your '
+                'clearance. It is now waiting for final '
+                'registrar approval.'
+            ),
+            notification_type=Notification.Type.CLEARANCE,
+            clearance=clearance,
+        )
+
+        registrar_users = User.objects.filter(
+            role=User.Role.REGISTRAR,
+            is_active=True,
+        )
+
+        for registrar in registrar_users:
+            NotificationService.create(
+                user=registrar,
+                title='Clearance Ready for Approval',
+                message=(
+                    f'Clearance for student '
+                    f'{clearance.student.student_id} is ready '
+                    f'for final approval.'
+                ),
+                notification_type=Notification.Type.CLEARANCE,
+                clearance=clearance,
+            )
     
     @staticmethod
     def _get_assigned_officer(*, office, student):
