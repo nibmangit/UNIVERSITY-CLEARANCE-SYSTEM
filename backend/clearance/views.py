@@ -230,4 +230,3 @@ class RegistrarIssueListView(APIView):
         serializer = RegistrarIssueSerializer(issues, many=True)
         return Response(serializer.data)
     
-    
