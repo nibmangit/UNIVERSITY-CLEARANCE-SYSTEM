@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from accounts.models import Student
 from .services import ClearanceService
-from .models import Clearance, ClearanceOffice, ClearanceType
+from .models import Clearance, ClearanceOffice, ClearanceType, Issue
 from .helper_serializer import (
     ClearanceStudentSerializer, ClearanceTypeSerializer,
     OfficeSerializer, StaffSerializer, IssueSerializer, SimpleUserSerializer
@@ -82,3 +82,52 @@ class ClearanceOfficeProcessSerializer(serializers.Serializer):
     
 class IssueResolveSerializer(serializers.Serializer):
     resolution_note = serializers.CharField()
+
+
+class OfficerClearanceSerializer(serializers.ModelSerializer):
+    clearance_id = serializers.IntegerField(source='clearance.id', read_only=True, )
+    clearance_status = serializers.CharField(source='clearance.status', read_only=True, )
+    student = ClearanceStudentSerializer( source='clearance.student', read_only=True, )
+    clearance_type = ClearanceTypeSerializer(source='clearance.clearance_type', read_only=True, )
+    office = OfficeSerializer(read_only=True)
+    assigned_officer = StaffSerializer(read_only=True, allow_null=True, )
+    issues = IssueSerializer(many=True, read_only=True, )
+
+    class Meta:
+        model = ClearanceOffice
+        fields = [
+            'id', 'clearance_id', 'clearance_status', 'student', 'clearance_type', 'office',
+            'assigned_officer', 'status', 'notes', 'reviewed_at', 'issues',  
+            ]
+        read_only_fields = fields
+        
+class RegistrarClearanceSerializer(serializers.ModelSerializer):
+    student = ClearanceStudentSerializer(read_only=True)
+    clearance_type = ClearanceTypeSerializer(read_only=True)
+    initiated_by = SimpleUserSerializer(read_only=True)
+    final_approved_by = SimpleUserSerializer(read_only=True, allow_null=True, )
+
+    class Meta:
+        model = Clearance
+        fields = [
+            'id', 'student', 'clearance_type', 'status', 'initiated_by', 'initiated_at',
+            'final_approved_by', 'final_approved_at', 'completed_at', 'submitted_at',
+        ]
+        read_only_fields = fields
+        
+class RegistrarIssueSerializer(serializers.ModelSerializer):
+    clearance_id = serializers.IntegerField(source='clearance_office.clearance.id', read_only=True )
+    student = ClearanceStudentSerializer(source='clearance_office.clearance.student', read_only=True )
+    office = OfficeSerializer(source='clearance_office.office', read_only=True )
+    clearance_status = serializers.CharField(source='clearance_office.clearance.status', read_only=True )
+    created_by = SimpleUserSerializer(read_only=True)
+    resolved_by = SimpleUserSerializer(read_only=True, allow_null=True)
+
+    class Meta:
+        model = Issue
+        fields = [
+            'id', 'clearance_id', 'student', 'office', 'clearance_status', 'reason',
+            'description', 'status', 'created_by', 'resolved_by', 'resolution_note', 'created_at', 'resolved_at',
+        ]
+        read_only_fields = fields
+        

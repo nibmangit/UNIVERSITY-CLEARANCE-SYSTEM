@@ -3,13 +3,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound, PermissionDenied
 
-from .models import Clearance, Clearance, ClearanceOffice, Issue
+from .models import Clearance, ClearanceOffice, Issue
 from .services import ClearanceService
 
 from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
+from .helper_serializer import IssueSerializer
 from .serializers import (
     ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, 
-    ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer
+    ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer, 
+    OfficerClearanceSerializer, RegistrarClearanceSerializer, RegistrarIssueSerializer
     )
 
 
@@ -19,11 +21,21 @@ class ClearanceListView(APIView):
     def get(self, request):
         clearances = (
             request.user.student_profile.clearances
-            .select_related('clearance_type')
-            .prefetch_related(
+            .select_related(
+                'student',
+                'student__faculty',
+                'student__department',
+                'student__section',
+                'clearance_type',
+                'initiated_by',
+                'final_approved_by',
+            ).prefetch_related(
                 'clearance_offices__office',
                 'clearance_offices__assigned_officer',
-            ).order_by('-initiated_at')
+                'clearance_offices__issues__created_by',
+                'clearance_offices__issues__resolved_by',
+            )
+            .order_by('-initiated_at')
         )
 
         serializer = ClearanceSerializer(clearances, many=True)
@@ -55,7 +67,10 @@ class ClearanceOfficeProcessView(APIView):
         try:
             clearance_office = (
                 ClearanceOffice.objects
-                .select_related('clearance', 'office', 'assigned_officer', ).get(pk=pk)
+                .select_related('clearance', 'office', 'assigned_officer', ).prefetch_related(
+                    'issues__created_by',
+                    'issues__resolved_by',
+                ).get(pk=pk)
             )
         except ClearanceOffice.DoesNotExist:
             raise NotFound('Clearance office not found.')
@@ -81,7 +96,11 @@ class ResolveIssueView(APIView):
 
     def patch(self, request, pk):
         try:
-            issue = (Issue.objects.select_related('clearance_office', 'clearance_office__assigned_officer', ).get(pk=pk) )
+            issue = (Issue.objects.select_related('clearance_office', 'clearance_office__assigned_officer','created_by', 'resolved_by' 
+                                                  ).prefetch_related(
+                                                      'clearance_office__issues__created_by',
+                                                      'clearance_office__issues__resolved_by',
+                                                      ).get(pk=pk) )
         except Issue.DoesNotExist:
             raise NotFound('Issue not found.')
 
@@ -98,29 +117,117 @@ class ResolveIssueView(APIView):
             resolution_note=serializer.validated_data['resolution_note' ],
         )
 
-        return Response({
-            'id': issue.id,
-            'status': issue.status,
-            'resolution_note': issue.resolution_note,
-            'resolved_by': issue.resolved_by.id,
-            'resolved_at': issue.resolved_at,
-            'clearance_office_status': (
-                issue.clearance_office.status
-            ),
-        })
+        response_serializer = IssueSerializer(issue, )
+
+        return Response(response_serializer.data, )
         
 class FinalApproveClearanceView(APIView):
     permission_classes = [IsAuthenticated, IsRegistrar]
 
     def patch(self, request, pk):
         try:
-            clearance = (Clearance.objects.prefetch_related('clearance_offices').get(pk=pk) )
+            clearance = (
+                Clearance.objects
+                .select_related(
+                    'student', 'student__faculty', 'student__department',
+                    'student__section', 'clearance_type', 'initiated_by', 'final_approved_by',
+                ).prefetch_related(
+                    'clearance_offices__office', 'clearance_offices__assigned_officer',
+                    'clearance_offices__issues__created_by', 'clearance_offices__issues__resolved_by',
+                ).get(pk=pk)
+            )
         except Clearance.DoesNotExist:
             raise NotFound('Clearance not found.')
 
-        clearance = ClearanceService.final_approve_clearance(clearance=clearance, registrar=request.user,)
+        clearance = ClearanceService.final_approve_clearance(clearance=clearance, registrar=request.user, )
 
-        serializer = ClearanceSerializer(clearance)
+        serializer = ClearanceSerializer(clearance,)
+
+        return Response(serializer.data, )
+
+
+### OFFICER VIEWS ###
+class OfficerClearanceListView(APIView):
+    permission_classes = [IsAuthenticated, IsOfficer]
+
+    def get(self, request):
+        clearances = (
+            ClearanceOffice.objects
+            .filter(assigned_officer=request.user.staff_profile)
+            .select_related(
+                'clearance', 'clearance__student', 'clearance__student__faculty',
+                'clearance__student__department', 'clearance__student__section',
+                'clearance__clearance_type', 'office', 'assigned_officer',
+            ).prefetch_related(
+                'issues__created_by',
+                'issues__resolved_by',
+            ).order_by('-clearance__initiated_at')
+        )
+
+        serializer = OfficerClearanceSerializer(clearances, many=True, )
 
         return Response(serializer.data)
+    
+class OfficerIssueListView(APIView):
+    permission_classes = [IsAuthenticated, IsOfficer]
 
+    def get(self, request):
+        issues = (
+            Issue.objects
+            .filter(clearance_office__assigned_officer=request.user.staff_profile
+            ).select_related(
+                'created_by', 'resolved_by', 'clearance_office',
+                'clearance_office__office', 'clearance_office__clearance',
+            ).order_by('-created_at')
+        )
+
+        serializer = IssueSerializer(issues, many=True)
+
+        return Response(serializer.data)
+    
+class RegistrarClearanceListView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def get(self, request):
+        clearances = (
+            Clearance.objects
+            .select_related(
+                'student', 'student__faculty', 'student__department',
+                'student__section', 'clearance_type', 'initiated_by', 'final_approved_by',
+            ).order_by('-initiated_at')
+        )
+        
+        status_filter = request.query_params.get('status')
+
+        if status_filter:
+            clearances = clearances.filter(status=status_filter)
+
+        serializer = RegistrarClearanceSerializer(clearances, many=True, )
+
+        return Response(serializer.data)
+    
+
+class RegistrarIssueListView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def get(self, request):
+        issues = (
+            Issue.objects
+            .select_related(
+                'created_by',  'resolved_by',
+                'clearance_office',
+                'clearance_office__office',
+                'clearance_office__clearance',
+                'clearance_office__clearance__student',
+                'clearance_office__clearance__student__faculty',
+                'clearance_office__clearance__student__department',
+                'clearance_office__clearance__student__section',
+                'clearance_office__clearance__clearance_type',
+            )
+            .order_by('-created_at')
+        )
+
+        serializer = RegistrarIssueSerializer(issues, many=True)
+        return Response(serializer.data)
+    
+    
