@@ -1,17 +1,11 @@
 from django.urls import path
 
 from .views import (
-    ClearanceCreateView,
-    ClearanceListView,
-    ClearanceOfficeProcessView,
-    FinalApproveClearanceView,
-    OfficerClearanceListView,
-    OfficerIssueListView,
-    RegistrarClearanceListView,
-    RegistrarIssueListView,
+    ClearanceCreateView, ClearanceListView, ClearanceOfficeProcessView, FinalApproveClearanceView,
+    OfficerClearanceListView, OfficerIssueListView, RegistrarClearanceListView, RegistrarIssueListView,
     ResolveIssueView,
 )
-
+from .dashboard_view import OfficerDashboardView, RegistrarDashboardView, StudentDashboardView
 
 urlpatterns = [
     path('', ClearanceListView.as_view(), name='clearance-list'),
@@ -26,4 +20,10 @@ urlpatterns = [
     
     path('registrar/', RegistrarClearanceListView.as_view(), name='registrar-clearance-list' ),
     path('registrar/issues/', RegistrarIssueListView.as_view(), name='registrar-issue-list' ),
+    
+    
+    #### DASHBOARD URLS ####
+    path('officer/dashboard/', OfficerDashboardView.as_view(), name='officer-dashboard' ),
+    path('registrar/dashboard/', RegistrarDashboardView.as_view(), name='registrar-dashboard' ),
+    path('student/dashboard/', StudentDashboardView.as_view(), name='student-dashboard' ),
 ]
