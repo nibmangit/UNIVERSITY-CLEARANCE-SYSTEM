@@ -1,6 +1,7 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.exceptions import NotFound, PermissionDenied
 
 from .models import Clearance, ClearanceOffice, Issue
@@ -42,6 +43,55 @@ class ClearanceListView(APIView):
 
         return Response(serializer.data)
     
+
+class ClearanceDetailView(RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ClearanceSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.role == 'STUDENT':
+            return (
+                Clearance.objects
+                .filter(student__user=user)
+                .select_related(
+                    'student', 'student__faculty', 'student__department', 'student__section',
+                    'clearance_type', 'initiated_by', 'final_approved_by',
+                ).prefetch_related(
+                    'clearance_offices__office', 'clearance_offices__assigned_officer',
+                    'clearance_offices__issues__created_by', 'clearance_offices__issues__resolved_by',
+                )
+            )
+
+        if user.role == 'OFFICER':
+            return (
+                Clearance.objects
+                .filter(
+                    clearance_offices__assigned_officer__user=user
+                )
+                .select_related(
+                    'student', 'student__faculty', 'student__department', 'student__section',
+                    'clearance_type', 'initiated_by', 'final_approved_by',
+                ).prefetch_related(
+                    'clearance_offices__office', 'clearance_offices__assigned_officer',
+                    'clearance_offices__issues__created_by',  'clearance_offices__issues__resolved_by',
+                ).distinct()
+            )
+
+        if user.role in ['REGISTRAR', 'ADMIN']:
+            return (
+                Clearance.objects
+                .select_related(
+                    'student', 'student__faculty', 'student__department',
+                    'student__section', 'clearance_type', 'initiated_by', 'final_approved_by',
+                ).prefetch_related(
+                    'clearance_offices__office', 'clearance_offices__assigned_officer',
+                    'clearance_offices__issues__created_by',  'clearance_offices__issues__resolved_by',
+                )
+            )
+
+        return Clearance.objects.none()
 
 class ClearanceCreateView(APIView):
     permission_classes = [IsAuthenticated, IsRegistrar]
