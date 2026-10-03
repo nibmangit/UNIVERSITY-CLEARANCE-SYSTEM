@@ -29,7 +29,7 @@ class ClearanceService:
 
     @staticmethod
     @transaction.atomic
-    def create_clearance(*, student: Student, clearance_type: ClearanceType, initiated_by, ):
+    def create_clearance(*, student: Student, clearance_type: ClearanceType, initiated_by, reason='' ):
         active_statuses = [
             Clearance.Status.INITIATED,
             Clearance.Status.IN_PROGRESS,
@@ -65,6 +65,7 @@ class ClearanceService:
             clearance_type=clearance_type,
             initiated_by=initiated_by,
             status=Clearance.Status.INITIATED,
+            reason=reason, 
         )
 
         for code in ClearanceService.REQUIRED_OFFICE_CODES:
