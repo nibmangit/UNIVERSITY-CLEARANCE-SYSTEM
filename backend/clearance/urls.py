@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import (
-    ClearanceCreateView, ClearanceDetailView, ClearanceListView, ClearanceOfficeProcessView, FinalApproveClearanceView,
+    ClearanceCreateView, ClearanceDetailView, ClearanceListView, ClearanceOfficeProcessView, ClearanceTypeListView, FinalApproveClearanceView,
     OfficerClearanceListView, OfficerIssueListView, RegistrarClearanceListView, RegistrarIssueListView,
     ResolveIssueView,
 )
@@ -28,4 +28,7 @@ urlpatterns = [
     path('officer/dashboard/', OfficerDashboardView.as_view(), name='officer-dashboard' ),
     path('registrar/dashboard/', RegistrarDashboardView.as_view(), name='registrar-dashboard' ),
     path('student/dashboard/', StudentDashboardView.as_view(), name='student-dashboard' ),
+    
+    #### Other Views ###
+    path('types/', ClearanceTypeListView.as_view(), name='clearance-type-list'),
 ]

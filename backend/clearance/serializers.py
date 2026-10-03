@@ -36,7 +36,7 @@ class ClearanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clearance
         fields = [
-            'id', 'student', 'clearance_type', 'status','initiated_by',
+            'id', 'student', 'clearance_type', 'status', 'reason', 'initiated_by',
             'initiated_at', 'final_approved_by', 'final_approved_at', 'completed_at', 'submitted_at', 'clearance_offices', 
             ]
         read_only_fields = fields
@@ -45,6 +45,7 @@ class ClearanceSerializer(serializers.ModelSerializer):
 class ClearanceCreateSerializer(serializers.Serializer):
     student_id = serializers.CharField()
     clearance_type_id = serializers.IntegerField()
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=200)
 
     def validate(self, attrs):
         try:
@@ -67,6 +68,7 @@ class ClearanceCreateSerializer(serializers.Serializer):
             student=validated_data['student'],
             clearance_type=validated_data['clearance_type'],
             initiated_by=self.context['request'].user,
+            reason=validated_data.get('reason', '').strip(),
         )
     
 class ClearanceOfficeProcessSerializer(serializers.Serializer):
@@ -106,17 +108,35 @@ class RegistrarClearanceSerializer(serializers.ModelSerializer):
     clearance_type = ClearanceTypeSerializer(read_only=True)
     initiated_by = SimpleUserSerializer(read_only=True)
     final_approved_by = SimpleUserSerializer(read_only=True, allow_null=True, )
+    progress = serializers.SerializerMethodField()
 
     class Meta:
         model = Clearance
         fields = [
-            'id', 'student', 'clearance_type', 'status', 'initiated_by', 'initiated_at',
+            'id', 'student', 'clearance_type', 'status', 'reason', 'initiated_by', 'initiated_at',
             'final_approved_by', 'final_approved_at', 'completed_at', 'submitted_at',
+            'progress',
         ]
         read_only_fields = fields
         
+    
+    def get_progress(self, obj):                                         # NEW
+        # Uses the prefetched offices, so there is no extra query per clearance.
+        offices = list(obj.clearance_offices.all())
+
+        def count(status):
+            return sum(1 for office in offices if office.status == status)
+
+        return {
+            'total': len(offices),
+            'cleared': count(ClearanceOffice.Status.CLEARED),
+            'flagged': count(ClearanceOffice.Status.FLAGGED),
+            'pending': count(ClearanceOffice.Status.PENDING),
+        }
+        
 class RegistrarIssueSerializer(serializers.ModelSerializer):
     clearance_id = serializers.IntegerField(source='clearance_office.clearance.id', read_only=True )
+    clearance_office_id = serializers.IntegerField(source='clearance_office.id', read_only=True)
     student = ClearanceStudentSerializer(source='clearance_office.clearance.student', read_only=True )
     office = OfficeSerializer(source='clearance_office.office', read_only=True )
     clearance_status = serializers.CharField(source='clearance_office.clearance.status', read_only=True )
@@ -126,7 +146,7 @@ class RegistrarIssueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issue
         fields = [
-            'id', 'clearance_id', 'student', 'office', 'clearance_status', 'reason',
+            'id', 'clearance_id', 'clearance_office_id', 'student', 'office', 'clearance_status', 'reason',
             'description', 'status', 'created_by', 'resolved_by', 'resolution_note', 'created_at', 'resolved_at',
         ]
         read_only_fields = fields

@@ -81,6 +81,8 @@ class Clearance(models.Model):
         max_length=30, choices=Status.choices,
         default=Status.INITIATED,
     )
+    
+    reason = models.CharField(max_length=200, blank=True, default='')
 
     initiated_by = models.ForeignKey(
         'accounts.User', on_delete=models.PROTECT,

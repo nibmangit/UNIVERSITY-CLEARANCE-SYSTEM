@@ -1,5 +1,8 @@
+from django.db.models import Prefetch, Q
+from clearance.models import Clearance
+
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotFound
@@ -16,6 +19,7 @@ from .serializers import (
 
 
 class LoginView(APIView):
+    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={'request': request}, )
@@ -68,11 +72,18 @@ class RegistrarStudentListView(APIView):
     def get(self, request):
         students = (
             Student.objects
-            .select_related(
-                'faculty', 'department', 'section',
-            ).order_by('student_id')
+            .select_related('faculty', 'department', 'section')
+            .prefetch_related(
+                Prefetch('clearances', queryset=Clearance.objects.select_related('clearance_type'))
+            )
+            .order_by('student_id')
         )
 
-        serializer = RegistrarStudentSerializer(students, many=True, )
+        search = request.query_params.get('search', '').strip()
+        if search:
+            students = students.filter(
+                Q(student_id__icontains=search) | Q(full_name__icontains=search)
+            )
 
+        serializer = RegistrarStudentSerializer(students, many=True)
         return Response(serializer.data)

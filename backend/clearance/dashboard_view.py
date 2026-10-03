@@ -11,7 +11,16 @@ from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
 from .helper_serializer import IssueSerializer
 from .serializers import ClearanceSerializer, OfficerClearanceSerializer, RegistrarClearanceSerializer, RegistrarClearanceSerializer, RegistrarIssueSerializer, RegistrarIssueSerializer 
 
-
+ISSUE_RELATED = [
+    'created_by', 'created_by__staff_profile',
+    'resolved_by', 'resolved_by__staff_profile',
+    'clearance_office', 'clearance_office__office',
+    'clearance_office__clearance',
+    'clearance_office__clearance__student',
+    'clearance_office__clearance__student__faculty',
+    'clearance_office__clearance__student__department',
+    'clearance_office__clearance__student__section',
+]
 
 class OfficerDashboardView(APIView):
     permission_classes = [IsAuthenticated, IsOfficer]
@@ -48,15 +57,14 @@ class OfficerDashboardView(APIView):
             .filter(
                 clearance_office__assigned_officer=officer,
                 status=Issue.Status.OPEN,
-            ).select_related(
-                'created_by', 'resolved_by', 'clearance_office', 'clearance_office__office',
-                'clearance_office__clearance', 'clearance_office__clearance__student',
-            ).order_by('-created_at')[:5]
+            )
+            .select_related(*ISSUE_RELATED)
+            .order_by('-created_at')[:5]
         )
 
         tasks_serializer = OfficerClearanceSerializer(recent_tasks, many=True )
 
-        issues_serializer = IssueSerializer(recent_issues, many=True )
+        issues_serializer = RegistrarIssueSerializer(recent_issues, many=True)
 
         return Response({
             'summary': summary,
@@ -89,7 +97,9 @@ class RegistrarDashboardView(APIView):
             .select_related(
                 'student', 'student__faculty', 'student__department', 'student__section', 'clearance_type',
                 'initiated_by', 'final_approved_by',
-            ).order_by('-initiated_at')[:5]
+            )
+            .prefetch_related('clearance_offices')                       # NEW
+            .order_by('-initiated_at')[:5]
         )
 
         recent_issues = (
@@ -151,7 +161,12 @@ class StudentDashboardView(APIView):
             .select_related(
                 'student', 'student__faculty', 'student__department', 'student__section',
                 'clearance_type', 'initiated_by', 'final_approved_by',
-            ).order_by('-initiated_at')[:5]
+            )
+            .prefetch_related(                                                  # NEW
+                'clearance_offices__office', 'clearance_offices__assigned_officer',
+                'clearance_offices__issues__created_by', 'clearance_offices__issues__resolved_by',
+            )
+            .order_by('-initiated_at')[:5]
         )
 
         recent_issues = (
@@ -159,15 +174,13 @@ class StudentDashboardView(APIView):
             .filter(
                 clearance_office__clearance__student=student,
                 status=Issue.Status.OPEN,
-            ).select_related(
-                'created_by', 'resolved_by', 'clearance_office',
-                'clearance_office__office', 'clearance_office__clearance',
-            ).order_by('-created_at')[:5]
+            )
+            .select_related(*ISSUE_RELATED)
+            .order_by('-created_at')[:5]
         )
-
         active_clearance_serializer = ClearanceSerializer(active_clearance ) if active_clearance else None
         recent_clearances_serializer = ClearanceSerializer(recent_clearances, many=True, )
-        recent_issues_serializer = IssueSerializer(recent_issues,  many=True, )
+        recent_issues_serializer = RegistrarIssueSerializer(recent_issues, many=True)
 
         return Response({
             'summary': summary,

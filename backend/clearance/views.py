@@ -4,11 +4,11 @@ from rest_framework.views import APIView
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.exceptions import NotFound, PermissionDenied
 
-from .models import Clearance, ClearanceOffice, Issue
+from .models import Clearance, ClearanceOffice, ClearanceType, Issue
 from .services import ClearanceService
 
 from accounts.permissions import IsOfficer, IsRegistrar, IsStudent
-from .helper_serializer import IssueSerializer
+from .helper_serializer import ClearanceTypeSerializer, IssueSerializer
 from .serializers import (
     ClearanceCreateSerializer, ClearanceOfficeProcessSerializer, 
     ClearanceOfficeSerializer, ClearanceSerializer, IssueResolveSerializer, 
@@ -224,16 +224,25 @@ class OfficerIssueListView(APIView):
     def get(self, request):
         issues = (
             Issue.objects
-            .filter(clearance_office__assigned_officer=request.user.staff_profile
-            ).select_related(
-                'created_by', 'resolved_by', 'clearance_office',
-                'clearance_office__office', 'clearance_office__clearance',
-            ).order_by('-created_at')
+            .filter(clearance_office__assigned_officer=request.user.staff_profile)
+            .select_related(
+                'created_by', 'created_by__staff_profile',
+                'resolved_by', 'resolved_by__staff_profile',
+                'clearance_office', 'clearance_office__office',
+                'clearance_office__clearance',
+                'clearance_office__clearance__student',
+                'clearance_office__clearance__student__faculty',
+                'clearance_office__clearance__student__department',
+                'clearance_office__clearance__student__section',
+            )
+            .order_by('-created_at')
         )
 
-        serializer = IssueSerializer(issues, many=True)
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            issues = issues.filter(status=status_filter)
 
-        return Response(serializer.data)
+        return Response(RegistrarIssueSerializer(issues, many=True).data)
     
 class RegistrarClearanceListView(APIView):
     permission_classes = [IsAuthenticated, IsRegistrar]
@@ -244,7 +253,7 @@ class RegistrarClearanceListView(APIView):
             .select_related(
                 'student', 'student__faculty', 'student__department',
                 'student__section', 'clearance_type', 'initiated_by', 'final_approved_by',
-            ).order_by('-initiated_at')
+            ).prefetch_related('clearance_offices').order_by('-initiated_at')
         )
         
         status_filter = request.query_params.get('status')
@@ -280,3 +289,11 @@ class RegistrarIssueListView(APIView):
         serializer = RegistrarIssueSerializer(issues, many=True)
         return Response(serializer.data)
     
+
+### Other Views ###
+class ClearanceTypeListView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def get(self, request):
+        types = ClearanceType.objects.filter(is_active=True).order_by('name')
+        return Response(ClearanceTypeSerializer(types, many=True).data)
