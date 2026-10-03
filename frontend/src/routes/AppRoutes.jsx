@@ -1,174 +1,99 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-
-import Login from '../pages/auth/Login';
-
-import StudentDashboard from '../pages/student/StudentDashboard';
-import Clearance from '../pages/student/Clearance';
-import History from '../pages/student/History';
-import Notification from '../pages/student/Notification';
-import Profile from '../pages/student/Profile';
-
-import OfficerDashboard from '../pages/officer/OfficerDashboard';
-import OfficerClearances from '../pages/officer/Clearances';
-import OfficerIssues from '../pages/officer/Issues';
-
-import RegistrarDashboard from '../pages/registrar/RegistrarDashboard';
-import Students from '../pages/registrar/Students';
-import Clearances from '../pages/registrar/Clearances';
-import Issues from '../pages/registrar/Issues';
-import Completed from '../pages/registrar/Completed';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import Layout from '../components/Layout';
+import Login from '../pages/auth/Login';
+import { useAuth } from '../hooks/useAuth';
+import { ROLES, homePathForRole } from '../utils/roles';
+import ProtectedRoute from './ProtectedRoute';
+import PublicOnlyRoute from './PublicOnlyRoute';
 
-function Placeholder({ title }) {
+function HomeRedirect() {
+  const { role } = useAuth();
+  return <Navigate to={homePathForRole(role)} replace />;
+}
+
+// TEMPORARY: stands in for every page until it is built. Each later step replaces one.
+function Placeholder({ showLogout = false }) {
+  const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-      <p className="mt-2 text-gray-600">
-        This page will be implemented in its assigned module.
+    <div className={showLogout ? 'p-6' : ''}>
+      <h1 className="text-2xl font-semibold text-slate-900">{pathname}</h1>
+      <p className="mt-2 text-sm text-slate-600">
+        Not built yet. Logged in as {user?.university_id} ({user?.role}).
       </p>
+      {showLogout && (
+        <button
+          type="button"
+          onClick={logout}
+          className="mt-4 h-10 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Log out
+        </button>
+      )}
+    </div>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="max-w-sm text-center">
+        <h1 className="text-xl font-semibold text-slate-900">Page not found</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          The page you're looking for doesn't exist or has moved.
+        </p>
+        <Link
+          to="/"
+          className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-sky-900 px-4 text-sm font-medium text-white hover:bg-sky-800"
+        >
+          Go to home
+        </Link>
+      </div>
     </div>
   );
 }
 
 function AppRoutes() {
   return (
-    <BrowserRouter>
-      <Routes>
-        
-        <Route  
-          path="/login" 
-          element={ 
-               <Login /> 
-              } />
+    <Routes>
+      <Route element={<PublicOnlyRoute />}>
+        <Route path="/login" element={<Login />} />
+      </Route>
 
-        {/* Student */}
-        <Route
-          path="/student"
-          element={
-            <Layout>
-              <StudentDashboard />
-            </Layout>
-          }
-        />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<HomeRedirect />} />
+      </Route>
 
-        <Route
-          path="/student/clearance"
-          element={
-            <Layout>
-              <Clearance />
-            </Layout>
-              }
-        />
+      {/* Student */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.STUDENT]} />}>
+        <Route element={<Layout />}>
+          <Route path="/student/*" element={<Placeholder />} />
+        </Route>
+      </Route>
 
-        <Route
-          path="/student/history"
-          element={
-            <Layout>
-              <History />
-            </Layout>
-          }
-        />
+      {/* Officer */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.OFFICER]} />}>
+        <Route element={<Layout />}>
+          <Route path="/officer/*" element={<Placeholder />} />
+        </Route>
+      </Route>
 
-        <Route
-          path="/student/notifications"
-          element={
-            <Layout>
-              <Notification />
-            </Layout>
-          }
-        />
+      {/* Registrar */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.REGISTRAR]} />}>
+        <Route element={<Layout />}>
+          <Route path="/registrar/*" element={<Placeholder />} />
+        </Route>
+      </Route>
 
-        <Route
-          path="/student/profile"
-          element={
-            <Layout>
-              <Profile />
-            </Layout>
-          }
-        />
+      {/* Admin: no defined screens yet, so it stays outside the shared layout */}
+      <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+        <Route path="/admin/*" element={<Placeholder showLogout />} />
+      </Route>
 
-        {/* Officer */}
-        <Route
-          path="/officer"
-          element={
-            <Layout>
-              <OfficerDashboard />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/officer/clearances"
-          element={
-            <Layout>
-              <OfficerClearances />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/officer/issues"
-          element={
-            <Layout>
-              <OfficerIssues />
-            </Layout>
-          }
-        />
-
-        {/* Registrar */}
-        <Route
-          path="/registrar"
-          element={
-            <Layout>
-              <RegistrarDashboard />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/registrar/students"
-          element={
-            <Layout>
-              <Students />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/registrar/clearances"
-          element={
-            <Layout>
-              <Clearances />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/registrar/issues"
-          element={
-            <Layout>
-              <Issues />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/registrar/completed"
-          element={
-            <Layout>
-              <Completed />
-            </Layout>
-          }
-        />
-
-        {/* Unknown route */}
-        <Route
-          path="*"
-          element={<Placeholder title="Page Not Found" />}
-        />
-      </Routes>
-    </BrowserRouter>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
 
