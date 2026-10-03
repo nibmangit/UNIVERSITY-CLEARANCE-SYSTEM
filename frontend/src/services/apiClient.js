@@ -1,7 +1,7 @@
 import { ApiError, NETWORK_MESSAGE, parseApiError } from '../utils/errors';
 
 // Comes from .env (VITE_API_BASE_URL). Falls back to "/api" if it is not set.
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
 
 const ACCESS_KEY = 'clearance.access';
 const REFRESH_KEY = 'clearance.refresh';
