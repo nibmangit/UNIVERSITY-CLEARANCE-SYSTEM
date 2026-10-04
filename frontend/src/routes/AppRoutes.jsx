@@ -87,6 +87,7 @@ function AppRoutes() {
           <Route path="/officer/clearances" element={<OfficerClearances />} />
           <Route path="/officer/clearances/:id" element={<OfficerClearanceDetails />} />
           <Route path="/officer/issues" element={<OfficerIssues />} />
+          <Route path="/officer/notifications" element={<Notifications />} />
           <Route path="/officer/*" element={<NotFound />} />
         </Route>
       </Route>

@@ -114,10 +114,16 @@ function NotificationRow({ item, busy, onMarkRead, clearanceBase }) {
   );
 }
 
+const CLEARANCE_BASE = {
+  STUDENT: '/student/clearance',
+  OFFICER: '/officer/clearances',
+  REGISTRAR: '/registrar/clearances',
+};
+
 export default function Notifications() {
   const { data, loading, error, reload } = useApi(notificationService.list);
-    const { role } = useAuth();
-  const clearanceBase = role === 'REGISTRAR' ? '/registrar/clearances' : '/student/clearance';
+  const { role } = useAuth();
+  const clearanceBase = CLEARANCE_BASE[role] ?? '/student/clearance';
 
   // Server data, plus the read marks we have applied since it was loaded.
   const [local, setLocal] = useState(null);

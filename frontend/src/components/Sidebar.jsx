@@ -15,6 +15,7 @@ const NAV_LINKS = {
     { label: 'Dashboard', path: '/officer', end: true },
     { label: 'Clearances', path: '/officer/clearances' },
     { label: 'Issues', path: '/officer/issues' },
+    { label: 'Notifications', path: '/officer/notifications' },
   ],
   REGISTRAR: [
     { label: 'Dashboard', path: '/registrar', end: true },
@@ -22,6 +23,7 @@ const NAV_LINKS = {
     { label: 'Clearances', path: '/registrar/clearances' },
     { label: 'Issues', path: '/registrar/issues' },
     { label: 'Completed', path: '/registrar/completed' },
+    { label: 'Notifications', path: '/registrar/notifications' },
   ],
 };
 

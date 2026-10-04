@@ -12,6 +12,14 @@ const NOTIFICATION_PAGES = {
     viewAllTo: '/student/notifications',
     clearancePath: (id) => `/student/clearance/${id}`,
   },
+  OFFICER: {
+    viewAllTo: '/officer/notifications',
+    clearancePath: (id) => `/officer/clearances/${id}`,
+  },
+  REGISTRAR: {
+    viewAllTo: '/registrar/notifications',
+    clearancePath: (id) => `/registrar/clearances/${id}`,
+  },
 };
 
 export default function Navbar({ onMenuClick, onLogout }) {

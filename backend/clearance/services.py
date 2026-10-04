@@ -104,6 +104,25 @@ class ClearanceService:
             notification_type=Notification.Type.CLEARANCE,
             clearance=clearance,
         )
+        
+                # Tell each assigned officer (once per clearance) that a student is waiting for them.
+        offices_by_officer = {}
+        for clearance_office in clearance.clearance_offices.select_related('assigned_officer__user', 'office'):
+            officer = clearance_office.assigned_officer
+            if officer is not None:
+                offices_by_officer.setdefault(officer, []).append(clearance_office.office.name)
+
+        for officer, office_names in offices_by_officer.items():
+            NotificationService.create(
+                user=officer.user,
+                title='New Clearance Assigned',
+                message=(
+                    f'{student.full_name} ({student.student_id}) needs clearance from '
+                    f'{", ".join(office_names)}.'
+                ),
+                notification_type=Notification.Type.CLEARANCE,
+                clearance=clearance,
+            )
 
         return clearance
     
