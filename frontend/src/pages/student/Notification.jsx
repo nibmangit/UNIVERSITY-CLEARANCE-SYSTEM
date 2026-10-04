@@ -9,6 +9,7 @@ import { SkeletonText } from '../../components/ui/Skeleton';
 import Tabs from '../../components/ui/Tabs';
 import { cx } from '../../components/ui/styles';
 import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../hooks/useAuth';
 import { announceNotificationChange, notificationService } from '../../services/notificationService';
 import { getErrorMessage } from '../../utils/errors';
 import { timeAgo } from '../../utils/format';
@@ -37,7 +38,7 @@ function emptyCopy(filterId) {
     default:
       return {
         title: 'No notifications yet',
-        message: "You'll be notified here when something changes on your clearance.",
+                message: "You'll be notified here when there is something new.",
       };
   }
 }
@@ -69,7 +70,7 @@ function TypeIcon({ type }) {
   );
 }
 
-function NotificationRow({ item, busy, onMarkRead }) {
+function NotificationRow({ item, busy, onMarkRead, clearanceBase }) {
   const unread = !item.is_read;
 
   return (
@@ -91,7 +92,7 @@ function NotificationRow({ item, busy, onMarkRead }) {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {item.clearance && (
               <Button
-                to={`/student/clearance/${item.clearance}`}
+                to={`${clearanceBase}/${item.clearance}`}
                 size="sm"
                 variant="secondary"
                 onClick={() => unread && onMarkRead(item.id)}
@@ -113,8 +114,10 @@ function NotificationRow({ item, busy, onMarkRead }) {
   );
 }
 
-export default function StudentNotifications() {
+export default function Notifications() {
   const { data, loading, error, reload } = useApi(notificationService.list);
+    const { role } = useAuth();
+  const clearanceBase = role === 'REGISTRAR' ? '/registrar/clearances' : '/student/clearance';
 
   // Server data, plus the read marks we have applied since it was loaded.
   const [local, setLocal] = useState(null);
@@ -221,7 +224,7 @@ export default function StudentNotifications() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {visible.map((item) => (
-              <NotificationRow key={item.id} item={item} busy={busyId === item.id} onMarkRead={markRead} />
+              <NotificationRow key={item.id} item={item} busy={busyId === item.id} onMarkRead={markRead} clearanceBase={clearanceBase} />
             ))}
           </ul>
         )}
