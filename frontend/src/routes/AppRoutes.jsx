@@ -10,6 +10,8 @@ import PublicOnlyRoute from './PublicOnlyRoute';
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentClearance from '../pages/student/Clearance';
 import StudentHistory from '../pages/student/History';
+import StudentNotifications from '../pages/student/Notification';
+import StudentProfile from '../pages/student/Profile';
 
 function HomeRedirect() {
   const { role } = useAuth();
@@ -77,6 +79,8 @@ function AppRoutes() {
           <Route path="/student/clearance" element={<StudentClearance />} />
           <Route path="/student/clearance/:id" element={<StudentClearance />} />
           <Route path="/student/history" element={<StudentHistory />} />
+          <Route path="/student/notifications" element={<StudentNotifications />} />
+          <Route path="/student/profile" element={<StudentProfile />} />
           <Route path="/student/*" element={<Placeholder />} />
         </Route>
       </Route>

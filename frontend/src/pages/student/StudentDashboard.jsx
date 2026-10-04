@@ -1,4 +1,5 @@
 import ClearanceProgress from '../../components/ClearanceProgress';
+import RecentNotifications from '../../components/RecentNotifications';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
@@ -79,6 +80,7 @@ export default function StudentDashboard() {
             }
           />
         </Card>
+        <RecentNotifications className="mt-6" viewAllTo="/student/notifications" />
       </>
     );
   }
