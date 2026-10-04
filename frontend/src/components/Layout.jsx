@@ -1,30 +1,43 @@
+import { useCallback, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+
+import Navbar from './Navbar';
 import Sidebar from './Sidebar';
+import ConfirmModal from './ui/ConfirmModal';
+import { useAuth } from '../hooks/useAuth';
 
 function Layout() {
+  const { logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  function askToLogOut() {
+    setMenuOpen(false);
+    setConfirmingLogout(true);
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar />
+      <Sidebar open={menuOpen} onClose={closeMenu} onLogout={askToLogOut} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
-          <h2 className="text-lg font-semibold text-slate-900">
-            University Clearance System
-          </h2>
+        <Navbar onMenuClick={() => setMenuOpen(true)} onLogout={askToLogOut} />
 
-          <div className="flex items-center gap-4">
-            <button type="button" className="text-slate-600 hover:text-slate-900">
-              🔔
-            </button>
-
-            <div className="text-sm font-medium text-slate-700">User</div>
-          </div>
-        </header>
-
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           <Outlet />
         </main>
       </div>
+
+      <ConfirmModal
+        open={confirmingLogout}
+        title="Log out?"
+        message="You will need to log in again to continue."
+        confirmLabel="Log out"
+        onConfirm={logout}
+        onCancel={() => setConfirmingLogout(false)}
+      />
     </div>
   );
 }
