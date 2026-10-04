@@ -10,13 +10,20 @@ import PublicOnlyRoute from './PublicOnlyRoute';
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentClearance from '../pages/student/Clearance';
 import StudentHistory from '../pages/student/History';
-import StudentNotifications from '../pages/student/Notification';
+import Notifications from '../pages/student/Notification';
 import StudentProfile from '../pages/student/Profile';
 
 import OfficerDashboard from '../pages/officer/OfficerDashboard';
 import OfficerClearances from '../pages/officer/Clearances';
 import OfficerClearanceDetails from '../pages/officer/ClearanceDetails';
 import OfficerIssues from '../pages/officer/Issues';
+
+import RegistrarDashboard from '../pages/registrar/RegistrarDashboard';
+import Students from '../pages/registrar/Students';
+import RegistrarClearances from '../pages/registrar/Clearances';
+import RegistrarClearanceDetails from '../pages/registrar/ClearanceDetails';
+import RegistrarIssues from '../pages/registrar/Issues';
+import RegistrarCompleted from '../pages/registrar/Completed';
 
 function HomeRedirect() {
   const { role } = useAuth();
@@ -67,7 +74,7 @@ function AppRoutes() {
           <Route path="/student/clearance" element={<StudentClearance />} />
           <Route path="/student/clearance/:id" element={<StudentClearance />} />
           <Route path="/student/history" element={<StudentHistory />} />
-          <Route path="/student/notifications" element={<StudentNotifications />} />
+          <Route path="/student/notifications" element={<Notifications />} />
           <Route path="/student/profile" element={<StudentProfile />} />
           <Route path="/student/*" element={<NotFound />} />
         </Route>
@@ -80,6 +87,7 @@ function AppRoutes() {
           <Route path="/officer/clearances" element={<OfficerClearances />} />
           <Route path="/officer/clearances/:id" element={<OfficerClearanceDetails />} />
           <Route path="/officer/issues" element={<OfficerIssues />} />
+          <Route path="/officer/notifications" element={<Notifications />} />
           <Route path="/officer/*" element={<NotFound />} />
         </Route>
       </Route>
@@ -87,6 +95,13 @@ function AppRoutes() {
       {/* Registrar */}
       <Route element={<ProtectedRoute allowedRoles={[ROLES.REGISTRAR]} />}>
         <Route element={<Layout />}>
+          <Route path="/registrar/" element={<RegistrarDashboard />} /> 
+          <Route path="/registrar/notifications" element={<Notifications />} /> 
+          <Route path="/registrar/students" element={<Students />} />
+          <Route path="/registrar/clearances" element={<RegistrarClearances />} />
+          <Route path="/registrar/clearances/:id" element={<RegistrarClearanceDetails />} />
+          <Route path="/registrar/issues" element={<RegistrarIssues />} />
+          <Route path="/registrar/completed" element={<RegistrarCompleted />} />
           <Route path="/registrar/*" element={<Placeholder />} />
         </Route>
       </Route>

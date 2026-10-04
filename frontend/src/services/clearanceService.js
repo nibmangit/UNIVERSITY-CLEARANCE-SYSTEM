@@ -24,4 +24,24 @@ export const clearanceService = {
 
   resolveIssue: (id, resolutionNote, options) =>
     api.patch(`/clearances/issues/${id}/resolve/`, { resolution_note: resolutionNote }, options),
+
+
+  // ---------- Registrar ----------
+  registrarDashboard: (options) => api.get('/clearances/registrar/dashboard/', options), 
+  listTypes: (options) => api.get('/clearances/types/', options),
+ 
+  create: ({ studentId, clearanceTypeId }, options) =>
+    api.post(
+      '/clearances/create/',
+      { student_id: studentId, clearance_type_id: clearanceTypeId },
+      options,
+    ),
+
+  listAll: (status, options) => {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return api.get(`/clearances/registrar/${query}`, options);
+  },
+
+  finalApprove: (id, options) => api.patch(`/clearances/${id}/approve/`, undefined, options),
+    listAllIssues: (options) => api.get('/clearances/registrar/issues/', options),
 };
