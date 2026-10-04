@@ -26,8 +26,6 @@ staticfiles/
 .env.*
 !.env.example
 
-backend/accounts/management/commands/seed_data.py
-
 # ==============================
 # Node / React
 # ==============================
