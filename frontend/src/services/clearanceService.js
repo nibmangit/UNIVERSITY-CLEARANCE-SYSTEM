@@ -6,4 +6,5 @@ export const clearanceService = {
 
   listMine: (options) => api.get('/clearances/', options),
   studentDashboard: (options) => api.get('/clearances/student/dashboard/', options),
+  get: (id, options) => api.get(`/clearances/${id}/`, options),
 };
