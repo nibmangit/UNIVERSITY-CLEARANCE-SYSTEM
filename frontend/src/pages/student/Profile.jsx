@@ -3,8 +3,7 @@ import Card from '../../components/ui/Card';
 import DetailList from '../../components/ui/DetailList';
 import ErrorState from '../../components/ui/ErrorState';
 import PageHeader from '../../components/ui/PageHeader';
-import Skeleton from '../../components/ui/Skeleton';
-import { SkeletonText } from '../../components/ui/Skeleton';
+import Skeleton, { SkeletonText } from '../../components/ui/Skeleton';
 import { useApi } from '../../hooks/useApi';
 import { authService } from '../../services/authService';
 

@@ -13,6 +13,11 @@ import StudentHistory from '../pages/student/History';
 import StudentNotifications from '../pages/student/Notification';
 import StudentProfile from '../pages/student/Profile';
 
+import OfficerDashboard from '../pages/officer/OfficerDashboard';
+import OfficerClearances from '../pages/officer/Clearances';
+import OfficerClearanceDetails from '../pages/officer/ClearanceDetails';
+import OfficerIssues from '../pages/officer/Issues';
+
 function HomeRedirect() {
   const { role } = useAuth();
   return <Navigate to={homePathForRole(role)} replace />;
@@ -42,24 +47,7 @@ function Placeholder({ showLogout = false }) {
   );
 }
 
-function NotFound() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-sm text-center">
-        <h1 className="text-xl font-semibold text-slate-900">Page not found</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          The page you're looking for doesn't exist or has moved.
-        </p>
-        <Link
-          to="/"
-          className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-sky-900 px-4 text-sm font-medium text-white hover:bg-sky-800"
-        >
-          Go to home
-        </Link>
-      </div>
-    </div>
-  );
-}
+
 
 function AppRoutes() {
   return (
@@ -81,14 +69,18 @@ function AppRoutes() {
           <Route path="/student/history" element={<StudentHistory />} />
           <Route path="/student/notifications" element={<StudentNotifications />} />
           <Route path="/student/profile" element={<StudentProfile />} />
-          <Route path="/student/*" element={<Placeholder />} />
+          <Route path="/student/*" element={<NotFound />} />
         </Route>
       </Route>
 
       {/* Officer */}
       <Route element={<ProtectedRoute allowedRoles={[ROLES.OFFICER]} />}>
         <Route element={<Layout />}>
-          <Route path="/officer/*" element={<Placeholder />} />
+          <Route path="/officer/" element={<OfficerDashboard />} />
+          <Route path="/officer/clearances" element={<OfficerClearances />} />
+          <Route path="/officer/clearances/:id" element={<OfficerClearanceDetails />} />
+          <Route path="/officer/issues" element={<OfficerIssues />} />
+          <Route path="/officer/*" element={<NotFound />} />
         </Route>
       </Route>
 
@@ -111,3 +103,23 @@ function AppRoutes() {
 }
 
 export default AppRoutes;
+
+
+function NotFound() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="max-w-sm text-center">
+        <h1 className="text-xl font-semibold text-slate-900">Page not found</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          The page you're looking for doesn't exist or has moved.
+        </p>
+        <Link
+          to="/"
+          className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-sky-900 px-4 text-sm font-medium text-white hover:bg-sky-800"
+        >
+          Go to home
+        </Link>
+      </div>
+    </div>
+  );
+}
