@@ -7,6 +7,10 @@ import { ROLES, homePathForRole } from '../utils/roles';
 import ProtectedRoute from './ProtectedRoute';
 import PublicOnlyRoute from './PublicOnlyRoute';
 
+import StudentDashboard from '../pages/student/StudentDashboard';
+import StudentClearance from '../pages/student/Clearance';
+import StudentHistory from '../pages/student/History';
+
 function HomeRedirect() {
   const { role } = useAuth();
   return <Navigate to={homePathForRole(role)} replace />;
@@ -69,6 +73,10 @@ function AppRoutes() {
       {/* Student */}
       <Route element={<ProtectedRoute allowedRoles={[ROLES.STUDENT]} />}>
         <Route element={<Layout />}>
+          <Route path="/student/" element={<StudentDashboard />} />
+          <Route path="/student/clearance" element={<StudentClearance />} />
+          <Route path="/student/clearance/:id" element={<StudentClearance />} />
+          <Route path="/student/history" element={<StudentHistory />} />
           <Route path="/student/*" element={<Placeholder />} />
         </Route>
       </Route>
@@ -91,6 +99,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
         <Route path="/admin/*" element={<Placeholder showLogout />} />
       </Route>
+ 
 
       <Route path="*" element={<NotFound />} />
     </Routes>
