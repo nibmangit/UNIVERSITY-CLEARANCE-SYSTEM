@@ -3,7 +3,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../utils/errors';
 
 
-const DevAccountPicker = import.meta.env.DEV ? lazy(() => import('./DevAccountPicker')) : null; //Dev Only
+const SHOW_DEMO_ACCOUNTS = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true';
+
+const DevAccountPicker = SHOW_DEMO_ACCOUNTS ? lazy(() => import('./DevAccountPicker')) : null; //Dev Only
 
 const SLIP_OFFICES = [
   { name: 'Advisor', cleared: true },
