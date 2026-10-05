@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import  NotificationClearReadView, NotificationDeleteView, NotificationListView, NotificationMarkAllReadView, NotificationMarkReadView, NotificationUnreadCountView
+from .views import AuditLogListView, AuditLogMetaView, NotificationClearReadView, NotificationDeleteView, NotificationListView, NotificationMarkAllReadView, NotificationMarkReadView, NotificationUnreadCountView
 
 
 urlpatterns = [
@@ -11,4 +11,7 @@ urlpatterns = [
     
     path('clear-read/', NotificationClearReadView.as_view(), name='notification-clear-read'),
     path('<int:pk>/', NotificationDeleteView.as_view(), name='notification-delete'),
+    
+        path('audit-logs/', AuditLogListView.as_view(), name='audit-log-list'),
+    path('audit-logs/meta/', AuditLogMetaView.as_view(), name='audit-log-meta'),
 ]

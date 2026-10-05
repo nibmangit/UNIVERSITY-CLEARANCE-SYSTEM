@@ -8,8 +8,10 @@ import PublicOnlyRoute from './PublicOnlyRoute';
 
 import Login from '../pages/auth/Login';
 import NotFound from '../pages/NotFound';
-import AdminDashboard from '../pages/admin/AdminDashboard';
 import Notifications from '../pages/Notification';
+
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import AdminLogs from '../pages/admin/Logs';
 
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentClearance from '../pages/student/Clearance';
@@ -88,6 +90,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
         <Route element={<Layout />}>
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/logs" element={<AdminLogs />} />
           <Route path="/admin/*" element={<NotFound />} />
         </Route>
       </Route>

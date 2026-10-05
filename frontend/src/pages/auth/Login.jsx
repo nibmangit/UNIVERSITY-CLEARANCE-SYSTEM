@@ -264,7 +264,7 @@ export default function Login() {
                 </Suspense>
               )}
             </>
-          )}  // Dev Only
+          )} 
 
           <p className="mt-8 text-sm text-slate-500">
             Can't log in? Contact the registrar's office to check your account.
