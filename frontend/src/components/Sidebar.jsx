@@ -25,6 +25,7 @@ const NAV_LINKS = {
     { label: 'Completed', path: '/registrar/completed' },
     { label: 'Notifications', path: '/registrar/notifications' },
   ],
+    ADMIN: [{ label: 'Dashboard', path: '/admin', end: true }],
 };
 
 /**

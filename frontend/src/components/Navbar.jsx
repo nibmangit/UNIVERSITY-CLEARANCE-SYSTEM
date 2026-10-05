@@ -20,6 +20,7 @@ const NOTIFICATION_PAGES = {
     viewAllTo: '/registrar/notifications',
     clearancePath: (id) => `/registrar/clearances/${id}`,
   },
+  
 };
 
 export default function Navbar({ onMenuClick, onLogout }) {

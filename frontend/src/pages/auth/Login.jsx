@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../utils/errors';
+
+
+const DevAccountPicker = import.meta.env.DEV ? lazy(() => import('./DevAccountPicker')) : null; //Dev Only
 
 const SLIP_OFFICES = [
   { name: 'Advisor', cleared: true },
@@ -90,6 +93,20 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+    const [pickerOpen, setPickerOpen] = useState(false); // Deve Only
+
+    useEffect(() => {
+    document.title = 'Log in · University Clearance';
+  }, []);
+
+    function fillFromDevAccount(credentials) {
+    setUniversityId(credentials.universityId);
+    setPassword(credentials.password);
+    setFieldErrors({});
+    setSubmitError('');
+    setPickerOpen(false);
+  } // Dev Only
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -230,6 +247,24 @@ export default function Login() {
               {submitting ? 'Logging in…' : 'Log in'}
             </button>
           </form>
+
+          {DevAccountPicker && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="mt-4 w-full rounded-md border border-dashed border-amber-400 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+              >
+                Development: choose a test account
+              </button>
+
+              {pickerOpen && (
+                <Suspense fallback={null}>
+                  <DevAccountPicker onClose={() => setPickerOpen(false)} onSelect={fillFromDevAccount} />
+                </Suspense>
+              )}
+            </>
+          )}  // Dev Only
 
           <p className="mt-8 text-sm text-slate-500">
             Can't log in? Contact the registrar's office to check your account.

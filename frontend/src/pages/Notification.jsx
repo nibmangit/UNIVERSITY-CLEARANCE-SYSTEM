@@ -1,18 +1,19 @@
 import { useState } from 'react';
 
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
-import EmptyState from '../../components/ui/EmptyState';
-import ErrorState from '../../components/ui/ErrorState';
-import PageHeader from '../../components/ui/PageHeader';
-import { SkeletonText } from '../../components/ui/Skeleton';
-import Tabs from '../../components/ui/Tabs';
-import { cx } from '../../components/ui/styles';
-import { useApi } from '../../hooks/useApi';
-import { useAuth } from '../../hooks/useAuth';
-import { announceNotificationChange, notificationService } from '../../services/notificationService';
-import { getErrorMessage } from '../../utils/errors';
-import { timeAgo } from '../../utils/format';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import ConfirmModal from '../components/ui/ConfirmModal';
+import EmptyState from '../components/ui/EmptyState';
+import ErrorState from '../components/ui/ErrorState';
+import PageHeader from '../components/ui/PageHeader';
+import { SkeletonText } from '../components/ui/Skeleton';
+import Tabs from '../components/ui/Tabs';
+import { cx } from '../components/ui/styles';
+import { useApi } from '../hooks/useApi';
+import { useAuth } from '../hooks/useAuth';
+import { announceNotificationChange, notificationService } from '../services/notificationService';
+import { getErrorMessage } from '../utils/errors';
+import { timeAgo } from '../utils/format';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -20,6 +21,12 @@ const FILTERS = [
   { id: 'CLEARANCE', label: 'Clearance' },
   { id: 'ISSUE', label: 'Issues' },
 ];
+
+const CLEARANCE_BASE = {
+  STUDENT: '/student/clearance',
+  OFFICER: '/officer/clearances',
+  REGISTRAR: '/registrar/clearances',
+};
 
 function matches(filterId, item) {
   if (filterId === 'all') return true;
@@ -38,7 +45,7 @@ function emptyCopy(filterId) {
     default:
       return {
         title: 'No notifications yet',
-                message: "You'll be notified here when there is something new.",
+        message: "You'll be notified here when there is something new.",
       };
   }
 }
@@ -70,7 +77,7 @@ function TypeIcon({ type }) {
   );
 }
 
-function NotificationRow({ item, busy, onMarkRead, clearanceBase }) {
+function NotificationRow({ item, busy, deleting, onMarkRead, onDelete, clearanceBase }) {
   const unread = !item.is_read;
 
   return (
@@ -88,25 +95,27 @@ function NotificationRow({ item, busy, onMarkRead, clearanceBase }) {
 
         <p className="mt-0.5 text-sm text-slate-600">{item.message}</p>
 
-        {(item.clearance || unread) && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {item.clearance && (
-              <Button
-                to={`${clearanceBase}/${item.clearance}`}
-                size="sm"
-                variant="secondary"
-                onClick={() => unread && onMarkRead(item.id)}
-              >
-                View clearance
-              </Button>
-            )}
-            {unread && (
-              <Button size="sm" variant="ghost" loading={busy} onClick={() => onMarkRead(item.id)}>
-                Mark as read
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {item.clearance && (
+            <Button
+              to={`${clearanceBase}/${item.clearance}`}
+              size="sm"
+              variant="secondary"
+              onClick={() => unread && onMarkRead(item.id)}
+            >
+              View clearance
+            </Button>
+          )}
+          {unread && (
+            <Button size="sm" variant="ghost" loading={busy} disabled={deleting} onClick={() => onMarkRead(item.id)}>
+              Mark as read
+            </Button>
+          )}
+          <Button size="sm" variant="danger-ghost" loading={deleting} disabled={busy} onClick={() => onDelete(item.id)}>
+            Delete
+            <span className="sr-only"> notification: {item.title}</span>
+          </Button>
+        </div>
       </div>
 
       {unread && <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-600" aria-hidden="true" />}
@@ -114,26 +123,24 @@ function NotificationRow({ item, busy, onMarkRead, clearanceBase }) {
   );
 }
 
-const CLEARANCE_BASE = {
-  STUDENT: '/student/clearance',
-  OFFICER: '/officer/clearances',
-  REGISTRAR: '/registrar/clearances',
-};
-
-export default function Notifications() {
-  const { data, loading, error, reload } = useApi(notificationService.list);
+export default function Notification() {
   const { role } = useAuth();
+  const { data, loading, error, reload } = useApi(notificationService.list);
   const clearanceBase = CLEARANCE_BASE[role] ?? '/student/clearance';
 
-  // Server data, plus the read marks we have applied since it was loaded.
+  // Server data, plus the changes we have made since it was loaded.
   const [local, setLocal] = useState(null);
   const [filter, setFilter] = useState('all');
   const [busyId, setBusyId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [markingAll, setMarkingAll] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [actionError, setActionError] = useState('');
 
   const items = local ?? data ?? [];
   const unreadCount = items.filter((item) => !item.is_read).length;
+  const readCount = items.length - unreadCount;
   const visible = items.filter((item) => matches(filter, item));
 
   const tabs = FILTERS.map((option) => ({
@@ -144,6 +151,10 @@ export default function Notifications() {
   function retry() {
     setLocal(null);
     reload();
+  }
+
+  function removeLocally(id) {
+    setLocal((previous) => (previous ?? data ?? []).filter((item) => item.id !== id));
   }
 
   async function markRead(id) {
@@ -176,14 +187,50 @@ export default function Notifications() {
     }
   }
 
+  async function deleteOne(id) {
+    setActionError('');
+    setDeletingId(id);
+    try {
+      await notificationService.remove(id);
+      removeLocally(id);
+      announceNotificationChange();
+    } catch (err) {
+      // Already gone (for example deleted in another tab): the list should drop it too.
+      if (err.status === 404) removeLocally(id);
+      else setActionError(getErrorMessage(err));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function clearRead() {
+    setActionError('');
+    setClearing(true);
+    try {
+      await notificationService.clearRead();
+      setLocal((previous) => (previous ?? data ?? []).filter((item) => !item.is_read));
+      announceNotificationChange();
+    } catch (err) {
+      setActionError(getErrorMessage(err));
+    } finally {
+      setClearing(false);
+      setConfirmingClear(false);
+    }
+  }
+
   const header = (
     <PageHeader
       title="Notifications"
       description={unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up."}
       actions={
-        <Button variant="secondary" disabled={unreadCount === 0} loading={markingAll} onClick={markAllRead}>
-          Mark all read
-        </Button>
+        <>
+          <Button variant="secondary" disabled={readCount === 0} onClick={() => setConfirmingClear(true)}>
+            Clear read
+          </Button>
+          <Button variant="secondary" disabled={unreadCount === 0} loading={markingAll} onClick={markAllRead}>
+            Mark all read
+          </Button>
+        </>
       }
     />
   );
@@ -230,11 +277,30 @@ export default function Notifications() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {visible.map((item) => (
-              <NotificationRow key={item.id} item={item} busy={busyId === item.id} onMarkRead={markRead} clearanceBase={clearanceBase} />
+              <NotificationRow
+                key={item.id}
+                item={item}
+                busy={busyId === item.id}
+                deleting={deletingId === item.id}
+                onMarkRead={markRead}
+                onDelete={deleteOne}
+                clearanceBase={clearanceBase}
+              />
             ))}
           </ul>
         )}
       </Card>
+
+      <ConfirmModal
+        open={confirmingClear}
+        title="Clear read notifications?"
+        message={`This permanently deletes ${readCount} read ${readCount === 1 ? 'notification' : 'notifications'}. Unread ones are kept.`}
+        confirmLabel="Clear read"
+        tone="danger"
+        loading={clearing}
+        onConfirm={clearRead}
+        onCancel={() => setConfirmingClear(false)}
+      />
     </>
   );
 }

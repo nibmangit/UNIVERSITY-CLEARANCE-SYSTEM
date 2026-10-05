@@ -19,4 +19,8 @@ export const notificationService = {
   markAllRead: (options) => api.patch('/notifications/read-all/', undefined, options),
   /** { count: 3 } */
   unreadCount: (options) => api.get('/notifications/unread-count/', options),
+
+  remove: (id, options) => api.delete(`/notifications/${id}/`, options),
+  /** Deletes all the user's read notifications. Returns { deleted_count }. */
+  clearRead: (options) => api.delete('/notifications/clear-read/', options),
 };

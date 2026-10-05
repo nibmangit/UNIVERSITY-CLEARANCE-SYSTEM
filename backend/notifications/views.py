@@ -1,3 +1,4 @@
+import rest_framework.status as status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -72,3 +73,27 @@ class NotificationUnreadCountView(APIView):
         count = Notification.objects.filter(user=request.user, is_read=False).count()
 
         return Response({'count': count})
+    
+
+class NotificationDeleteView(APIView):
+    """DELETE /notifications/<id>/ deletes one of your own notifications."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        # Filtering by user means someone else's notification looks like it does not exist.
+        deleted, _ = Notification.objects.filter(pk=pk, user=request.user).delete()
+
+        if not deleted:
+            raise NotFound('Notification not found.')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class NotificationClearReadView(APIView):
+    """DELETE /notifications/clear-read/ deletes all your read notifications. Unread ones are kept."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        deleted, _ = Notification.objects.filter(user=request.user, is_read=True).delete()
+
+        return Response({'deleted_count': deleted})
