@@ -139,12 +139,25 @@ REST_FRAMEWORK = {
     ),
 }
 
-# 4. Dynamic CORS Setup
+# 4. Dynamic CORS and CSRF Setup
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in os.environ.get(
         'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173'
+        'http://localhost:5173,http://127.0.0.1:5173,https://university-clearance-system-1.vercel.app'
+    ).split(',') if origin.strip()
+]
+
+# CRITICAL FIX: Django blocks POST requests from cross-origin domains without this
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://university-clearance-system-1.vercel.app,https://university-clearance-system-jymx.onrender.com'
     ).split(',') if origin.strip()
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# 5. Reverse Proxy Settings for Render/Cloudflare (Fixes HTTP/HTTPS header mismatch)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
