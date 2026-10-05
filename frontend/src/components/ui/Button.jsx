@@ -7,6 +7,7 @@ const VARIANTS = {
   secondary: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
   danger: 'bg-red-700 text-white hover:bg-red-800',
   ghost: 'text-slate-700 hover:bg-slate-100',
+  'danger-ghost': 'text-red-700 hover:bg-red-50',
 };
 
 const SIZES = {
@@ -23,6 +24,7 @@ export default function Button({
   disabled = false,
   fullWidth = false,
   to,
+  href,
   type = 'button',
   className,
   children,
@@ -37,6 +39,14 @@ export default function Button({
     fullWidth && 'w-full',
     className,
   );
+
+  if (href && !disabled && !loading) {
+    return (
+      <a href={href} className={classes} {...rest}>
+        {children}
+      </a>
+    );
+  }
 
   // A link only makes sense when the button is usable.
   if (to && !disabled && !loading) {

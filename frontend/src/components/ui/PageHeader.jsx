@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Breadcrumb from './Breadcrumb';
 import { cx, focusRing } from './styles';
+import Breadcrumb from './Breadcrumb';
 
 
 export default function PageHeader({
@@ -11,6 +12,11 @@ export default function PageHeader({
   backTo,
   backLabel = 'Back',
 }) {
+
+  useEffect(() => {
+    document.title = `${title} · University Clearance`;
+  }, [title]);
+
   return (
     <header className="mb-6">
       {breadcrumbs && <Breadcrumb items={breadcrumbs} className="mb-2" />}

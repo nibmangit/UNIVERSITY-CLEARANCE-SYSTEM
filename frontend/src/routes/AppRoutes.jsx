@@ -1,16 +1,21 @@
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 import Layout from '../components/Layout';
-import Login from '../pages/auth/Login';
 import { useAuth } from '../hooks/useAuth';
 import { ROLES, homePathForRole } from '../utils/roles';
 import ProtectedRoute from './ProtectedRoute';
 import PublicOnlyRoute from './PublicOnlyRoute';
 
+import Login from '../pages/auth/Login';
+import NotFound from '../pages/NotFound';
+import Notifications from '../pages/Notification';
+
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import AdminLogs from '../pages/admin/Logs';
+
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentClearance from '../pages/student/Clearance';
 import StudentHistory from '../pages/student/History';
-import Notifications from '../pages/student/Notification';
 import StudentProfile from '../pages/student/Profile';
 
 import OfficerDashboard from '../pages/officer/OfficerDashboard';
@@ -29,31 +34,6 @@ function HomeRedirect() {
   const { role } = useAuth();
   return <Navigate to={homePathForRole(role)} replace />;
 }
-
-// TEMPORARY: stands in for every page until it is built. Each later step replaces one.
-function Placeholder({ showLogout = false }) {
-  const { user, logout } = useAuth();
-  const { pathname } = useLocation();
-
-  return (
-    <div className={showLogout ? 'p-6' : ''}>
-      <h1 className="text-2xl font-semibold text-slate-900">{pathname}</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Not built yet. Logged in as {user?.university_id} ({user?.role}).
-      </p>
-      {showLogout && (
-        <button
-          type="button"
-          onClick={logout}
-          className="mt-4 h-10 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Log out
-        </button>
-      )}
-    </div>
-  );
-}
-
 
 
 function AppRoutes() {
@@ -102,39 +82,23 @@ function AppRoutes() {
           <Route path="/registrar/clearances/:id" element={<RegistrarClearanceDetails />} />
           <Route path="/registrar/issues" element={<RegistrarIssues />} />
           <Route path="/registrar/completed" element={<RegistrarCompleted />} />
-          <Route path="/registrar/*" element={<Placeholder />} />
+          <Route path="/registrar/*" element={<NotFound />} />
         </Route>
       </Route>
 
-      {/* Admin: no defined screens yet, so it stays outside the shared layout */}
+      {/* Admin */}
       <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
-        <Route path="/admin/*" element={<Placeholder showLogout />} />
+        <Route element={<Layout />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/logs" element={<AdminLogs />} />
+          <Route path="/admin/*" element={<NotFound />} />
+        </Route>
       </Route>
  
 
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<NotFound fullScreen />} />
     </Routes>
   );
 }
 
 export default AppRoutes;
-
-
-function NotFound() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-sm text-center">
-        <h1 className="text-xl font-semibold text-slate-900">Page not found</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          The page you're looking for doesn't exist or has moved.
-        </p>
-        <Link
-          to="/"
-          className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-sky-900 px-4 text-sm font-medium text-white hover:bg-sky-800"
-        >
-          Go to home
-        </Link>
-      </div>
-    </div>
-  );
-}

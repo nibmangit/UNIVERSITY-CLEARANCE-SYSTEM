@@ -1,749 +1,307 @@
-from datetime import datetime
+"""
+python manage.py seed_data
 
-from django.core.management.base import BaseCommand
+Creates the base data the system cannot create for itself: faculties, departments, sections,
+the six offices, clearance types, the staff and student accounts, and the office assignments
+that decide which officer handles which student.
+
+It does NOT create clearances, issues, notifications or logs. The app creates those.
+Safe to run more than once: anything that already exists is left alone (passwords included).
+"""
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from accounts.models import (
-    Department,
-    Faculty,
-    Section,
-    Staff,
-    Student,
-    User,
-)
-from clearance.models import (
-    Clearance,
-    ClearanceOffice,
-    ClearanceType,
-    Issue,
-    Office,
-    OfficeAssignment,
-)
-from notifications.models import Notification, AuditLog
+from accounts.models import Department, Faculty, Section, Staff, Student
+from clearance.models import ClearanceType, Office, OfficeAssignment
+
+User = get_user_model()
+
+DEFAULT_PASSWORD = 'Clearance@2026'
+
+# ---------- Structure ----------
+
+FACULTIES = [
+    {
+        'code': 'COMP',
+        'name': 'Faculty of Computing',
+        'departments': [('SE', 'Software Engineering'), ('CS', 'Computer Science')],
+    },
+    {
+        'code': 'BUS',
+        'name': 'Faculty of Business and Economics',
+        'departments': [('ACC', 'Accounting and Finance'), ('MGT', 'Management')],
+    },
+]
+
+# (section name, year), created for every department.
+SECTIONS = [('A', 3), ('B', 3), ('A', 4)]
+
+# The six offices every clearance needs. The codes are used by the clearance logic: do not rename them.
+OFFICES = [
+    ('ADVISOR', 'Advisor', 'Confirms the student has completed the department requirements.'),
+    ('LIBRARY', 'Library', 'Confirms no books are overdue or unreturned.'),
+    ('DORMITORY', 'Dormitory', 'Confirms the room has been handed back in good condition.'),
+    ('SPORT', 'Sport Office', 'Confirms all sports equipment has been returned.'),
+    ('CAFE', 'Café', 'Confirms there is no outstanding balance or unreturned item.'),
+    ('FACULTY_STORE', 'Faculty Store', 'Confirms all faculty property has been returned.'),
+]
+
+CLEARANCE_TYPES = [
+    ('Graduation', 'Clearance for students who are graduating.'),
+    ('Withdrawal', 'Clearance for students leaving the university before graduating.'),
+    ('Transfer', 'Clearance for students transferring to another institution.'),
+]
+
+# ---------- People ----------
+
+ADMIN = ('ADM001', 'Yohannes Admasu')
+REGISTRAR = ('REG001', 'Mulugeta Tesema')
+
+# One officer per office. Nobody covers two different offices.
+OFFICERS = [
+    ('ADV001', 'Dr. Hana Alemu', 'ADVISOR'),
+    ('LIB001', 'Tsegaye Wolde', 'LIBRARY'),
+    ('DOR001', 'Birtukan Shiferaw', 'DORMITORY'),
+    ('SPO001', 'Getnet Abera', 'SPORT'),
+    ('CAF001', 'Almaz Teshome', 'CAFE'),
+    ('STO001', 'Zerihun Mekonnen', 'FACULTY_STORE'),
+]
+
+STUDENT_NAMES = [
+    'Abebe Kebede', 'Mahlet Tesfaye', 'Samuel Bekele', 'Marta Girma', 'Dawit Tadesse', 'Selam Haile',
+    'Yonas Mengistu', 'Tigist Worku', 'Kidus Assefa', 'Ruth Demissie', 'Nathnael Getachew', 'Bethlehem Lemma',
+    'Henok Alemayehu', 'Meron Solomon', 'Biniyam Tefera', 'Saron Abate', 'Eyob Kassa', 'Liya Fikadu',
+    'Robel Negash', 'Eden Zewdu', 'Mikias Tilahu', 'Rediet Yilma', 'Fitsum Berhane', 'Helen Desta',
+]
+
+STUDENTS_PER_DEPARTMENT = 6
+# Which of SECTIONS each student in a department gets: two in 3A, two in 3B, two in 4A.
+SECTION_PATTERN = [0, 0, 1, 1, 2, 2]
 
 
-SEED_PASSWORD = 'TestPass123!'
+def split_name(full_name):
+    parts = [part for part in full_name.split() if part not in ('Dr.', 'Prof.')]
+    return parts[0], ' '.join(parts[1:])
 
 
-def parse_datetime(value):
-    if value is None:
-        return None
-
-    return datetime.fromisoformat(value)
+def make_phone(number):
+    return f'+2519{10000000 + number * 7919:08d}'
 
 
 class Command(BaseCommand):
-    help = 'Reset and seed the database with project mock data.'
+    help = 'Creates the faculties, offices, officers, registrar, admin, students and assignments the system needs.'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--password',
+            default=DEFAULT_PASSWORD,
+            help=f'Password for every NEW account (default: {DEFAULT_PASSWORD}).',
+        )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Run even when DEBUG is off. Only for servers you know are safe for demo accounts.',
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
-
-        self.stdout.write('Clearing existing project data...')
-
-        # Delete in dependency order.
-        Notification.objects.all().delete()
-        AuditLog.objects.all().delete()
-        Issue.objects.all().delete()
-        ClearanceOffice.objects.all().delete()
-        Clearance.objects.all().delete()
-        ClearanceType.objects.all().delete()
-        OfficeAssignment.objects.all().delete()
-        Office.objects.all().delete()
-        Student.objects.all().delete()
-        Staff.objects.all().delete()
-        Section.objects.all().delete()
-        Department.objects.all().delete()
-        Faculty.objects.all().delete()
-        User.objects.all().delete()
-
-        self.stdout.write('Creating users...')
-
-        users_data = [
-            (1, 'BDU00123', 'STUDENT', 'Abebe', 'Kebede'),
-            (2, 'BDU00124', 'STUDENT', 'Mekdes', 'Alemu'),
-            (3, 'BDU00125', 'STUDENT', 'Dawit', 'Tadesse'),
-            (101, 'OFF001', 'OFFICER', 'Hana', 'Alemu'),
-            (102, 'OFF002', 'OFFICER', 'Samuel', 'Bekele'),
-            (103, 'OFF003', 'OFFICER', 'Mimi', 'Worku'),
-            (201, 'REG001', 'REGISTRAR', 'Kebede', 'Tadesse'),
-            (301, 'ADM001', 'ADMIN', 'Dawit', 'Bekele'),
-        ]
-
-        users = {}
-
-        for user_id, username, role, first_name, last_name in users_data:
-            user = User(
-                id=user_id,
-                username=username,
-                university_id=username,
-                role=role,
-                first_name=first_name,
-                last_name=last_name,
-            )
-            user.set_password(SEED_PASSWORD)
-            user.save()
-            users[user_id] = user
-
-        self.stdout.write('Creating faculties...')
-
-        faculties_data = [
-            (1, 'Faculty of Computing', 'FC'),
-            (2, 'Faculty of Engineering', 'FE'),
-            (3, 'Faculty of Business', 'FB'),
-        ]
-
-        faculties = {}
-
-        for faculty_id, name, code in faculties_data:
-            faculties[faculty_id] = Faculty.objects.create(
-                id=faculty_id,
-                name=name,
-                code=code,
-                is_active=True,
+        if not settings.DEBUG and not options['force']:
+            raise CommandError(
+                'DEBUG is off, so this looks like a real server. Demo accounts share one password, '
+                'so seeding is blocked. Use --force if you really mean it.'
             )
 
-        self.stdout.write('Creating departments...')
+        self.password = options['password']
+        self.counts = {}
+        self.existing_users = []
+        self.student_rows = []
 
-        departments_data = [
-            (1, 1, 'Software Engineering', 'SE'),
-            (2, 1, 'Computer Science', 'CS'),
-            (3, 2, 'Electrical Engineering', 'EE'),
-            (4, 3, 'Accounting', 'ACC'),
-        ]
+        departments, sections = self._seed_structure()
+        offices = self._seed_offices()
+        self._seed_clearance_types()
+        self._seed_staff(offices, departments, sections)
+        self._seed_students(departments, sections)
+        self._report()
 
-        departments = {}
+    # ---------- helpers ----------
 
-        for department_id, faculty_id, name, code in departments_data:
-            departments[department_id] = Department.objects.create(
-                id=department_id,
-                faculty=faculties[faculty_id],
-                name=name,
-                code=code,
-                is_active=True,
-            )
+    def _count(self, label):
+        self.counts[label] = self.counts.get(label, 0) + 1
 
-        self.stdout.write('Creating sections...')
+    def _get_or_create(self, label, model, lookup, defaults=None):
+        obj, created = model.objects.get_or_create(**lookup, defaults=defaults or {})
+        if created:
+            self._count(label)
+        return obj
 
-        sections_data = [
-            (1, 1, 'Section A', 3),
-            (2, 1, 'Section B', 3),
-            (3, 2, 'Section A', 4),
-            (4, 3, 'Section A', 4),
-            (5, 4, 'Section A', 4),
-        ]
+    def _user(self, *, university_id, full_name, role, **extra):
+        """Creates the login account. An account that already exists is left exactly as it is."""
+        user = User.objects.filter(university_id=university_id).first()
+        if user is not None:
+            self.existing_users.append(university_id)
+            return user
 
-        sections = {}
+        first_name, last_name = split_name(full_name)
+        user = User.objects.create_user(
+            username=university_id.lower(),
+            password=self.password,
+            email=f'{university_id.lower()}@example.edu',
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            university_id=university_id,
+            **extra,
+        )
+        self._count('user accounts')
+        return user
 
-        for section_id, department_id, name, year in sections_data:
-            sections[section_id] = Section.objects.create(
-                id=section_id,
-                department=departments[department_id],
-                name=name,
-                year=year,
-                is_active=True,
-            )
+    def _staff(self, *, university_id, full_name, role, number, **extra):
+        user = self._user(university_id=university_id, full_name=full_name, role=role, **extra)
+        staff, created = Staff.objects.get_or_create(
+            user=user,
+            defaults={
+                'employee_id': university_id,
+                'full_name': full_name,
+                'email': user.email or f'{university_id.lower()}@example.edu',
+                'phone': make_phone(number),
+            },
+        )
+        if created:
+            self._count('staff profiles')
+        return staff
 
-        self.stdout.write('Creating students...')
+    def _assign(self, staff, office, faculty=None, department=None, section=None):
+        _, created = OfficeAssignment.objects.get_or_create(
+            staff=staff,
+            office=office,
+            faculty=faculty,
+            department=department,
+            section=section,
+            defaults={'is_active': True},
+        )
+        if created:
+            self._count('office assignments')
 
-        students_data = [
-            (
-                1, 1, 'BDU00123', 'Abebe Kebede',
-                1, 1, 1, 3,
-                'abebe@bdu.edu.et', '+251911111111'
-            ),
-            (
-                2, 2, 'BDU00124', 'Mekdes Alemu',
-                1, 2, 3, 4,
-                'mekdes@bdu.edu.et', '+251922222222'
-            ),
-            (
-                3, 3, 'BDU00125', 'Dawit Tadesse',
-                2, 3, 4, 4,
-                'dawit@bdu.edu.et', '+251933333333'
-            ),
-        ]
+    # ---------- seeding ----------
 
-        students = {}
+    def _seed_structure(self):
+        departments = []
+        sections = {}  # department id -> its sections, in the order of SECTIONS
 
-        for (
-            student_id,
-            user_id,
-            student_number,
-            full_name,
-            faculty_id,
-            department_id,
-            section_id,
-            year,
-            email,
-            phone,
-        ) in students_data:
+        for item in FACULTIES:
+            faculty = self._get_or_create('faculties', Faculty, {'code': item['code']}, {'name': item['name']})
 
-            students[student_id] = Student.objects.create(
-                id=student_id,
-                user=users[user_id],
-                student_id=student_number,
-                full_name=full_name,
-                faculty=faculties[faculty_id],
-                department=departments[department_id],
-                section=sections[section_id],
-                year=year,
-                email=email,
-                phone=phone,
-            )
+            for code, name in item['departments']:
+                department = self._get_or_create(
+                    'departments', Department, {'faculty': faculty, 'code': code}, {'name': name},
+                )
+                departments.append(department)
 
-        self.stdout.write('Creating staff...')
+                for section_name, year in SECTIONS:
+                    section = self._get_or_create(
+                        'sections', Section, {'department': department, 'name': section_name, 'year': year},
+                    )
+                    sections.setdefault(department.pk, []).append(section)
 
-        staff_data = [
-            (
-                1, 101, 'EMP001', 'Hana Alemu',
-                'hana@bdu.edu.et', '+251911000001'
-            ),
-            (
-                2, 102, 'EMP002', 'Samuel Bekele',
-                'samuel@bdu.edu.et', '+251911000002'
-            ),
-            (
-                3, 103, 'EMP003', 'Mimi Worku',
-                'mimi@bdu.edu.et', '+251911000003'
-            ),
-            (
-                4, 201, 'REG001', 'Kebede Tadesse',
-                'kebede@bdu.edu.et', '+251911000004'
-            ),
-            (
-                5, 301, 'ADM001', 'Dawit Bekele',
-                'dawit.b@bdu.edu.et', '+251911000005'
-            ),
-        ]
+        return departments, sections
 
-        staff_members = {}
-
-        for (
-            staff_id,
-            user_id,
-            employee_id,
-            full_name,
-            email,
-            phone,
-        ) in staff_data:
-
-            staff_members[staff_id] = Staff.objects.create(
-                id=staff_id,
-                user=users[user_id],
-                employee_id=employee_id,
-                full_name=full_name,
-                email=email,
-                phone=phone,
-                is_active=True,
-            )
-
-        self.stdout.write('Creating offices...')
-
-        offices_data = [
-            (1, 'Advisor', 'ADVISOR', 'Academic advisor clearance.'),
-            (2, 'Library', 'LIBRARY', 'Library clearance.'),
-            (3, 'Dormitory', 'DORMITORY', 'Dormitory clearance.'),
-            (4, 'Sport Office', 'SPORT', 'Sport office clearance.'),
-            (5, 'Café', 'CAFE', 'Café clearance.'),
-            (
-                6,
-                'Faculty Store',
-                'FACULTY_STORE',
-                'Faculty store clearance.',
-            ),
-        ]
-
+    def _seed_offices(self):
         offices = {}
-
-        for office_id, name, code, description in offices_data:
-            offices[office_id] = Office.objects.create(
-                id=office_id,
-                name=name,
-                code=code,
-                description=description,
-                is_active=True,
+        for code, name, description in OFFICES:
+            offices[code] = self._get_or_create(
+                'offices', Office, {'code': code}, {'name': name, 'description': description},
             )
+        return offices
 
-        self.stdout.write('Creating office assignments...')
+    def _seed_clearance_types(self):
+        for name, description in CLEARANCE_TYPES:
+            self._get_or_create('clearance types', ClearanceType, {'name': name}, {'description': description})
 
-        assignments_data = [
-            (1, 1, 1, 1, 1, 1),
-            (2, 2, 1, 1, 2, 3),
-            (3, 3, 1, 2, 3, 4),
-            (4, 1, 2, None, None, None),
-            (5, 2, 3, None, None, None),
-            (6, 3, 4, None, None, None),
-            (7, 1, 5, None, None, None),
-            (8, 2, 6, 1, None, None),
-            (9, 3, 6, 2, None, None),
-        ]
-
-        for (
-            assignment_id,
-            staff_id,
-            office_id,
-            faculty_id,
-            department_id,
-            section_id,
-        ) in assignments_data:
-
-            OfficeAssignment.objects.create(
-                id=assignment_id,
-                staff=staff_members[staff_id],
-                office=offices[office_id],
-                faculty=(
-                    faculties[faculty_id]
-                    if faculty_id
-                    else None
-                ),
-                department=(
-                    departments[department_id]
-                    if department_id
-                    else None
-                ),
-                section=(
-                    sections[section_id]
-                    if section_id
-                    else None
-                ),
-                is_active=True,
-            )
-
-        self.stdout.write('Creating clearance types...')
-
-        clearance_types_data = [
-            (
-                1,
-                'End of Year',
-                'Clearance at the end of an academic year.',
-            ),
-            (
-                2,
-                'Withdrawal',
-                'Clearance for students withdrawing.',
-            ),
-            (
-                3,
-                'Graduation',
-                'Final clearance before graduation.',
-            ),
-            (
-                4,
-                'Other',
-                'Other clearance purposes.',
-            ),
-        ]
-
-        clearance_types = {}
-
-        for type_id, name, description in clearance_types_data:
-            clearance_types[type_id] = ClearanceType.objects.create(
-                id=type_id,
-                name=name,
-                description=description,
-                is_active=True,
-            )
-
-        self.stdout.write('Creating clearances...')
-
-        clearances_data = [
-            (
-                101,
-                1,
-                1,
-                'IN_PROGRESS',
-                4,
-                '2026-09-15T09:30:00',
-                '2026-09-15T10:15:00',
-                None,
-                None,
-                None,
-            ),
-            (
-                102,
-                2,
-                3,
-                'PENDING_REGISTRAR',
-                4,
-                '2026-09-10T09:00:00',
-                '2026-09-10T10:00:00',
-                None,
-                None,
-                None,
-            ),
-            (
-                103,
-                3,
-                3,
-                'COMPLETED',
-                4,
-                '2026-08-20T09:00:00',
-                '2026-08-20T10:00:00',
-                4,
-                '2026-08-25T14:00:00',
-                '2026-08-25T14:00:00',
-            ),
-        ]
-
-        clearances = {}
-
-        for (
-            clearance_id,
-            student_id,
-            type_id,
-            status,
-            initiated_by,
-            initiated_at,
-            submitted_at,
-            approved_by,
-            approved_at,
-            completed_at,
-        ) in clearances_data:
-            
-            staff_initiator = staff_members.get(initiated_by)
-            user_who_initiated = staff_initiator.user if staff_initiator else None
-            
-            staff_approver = staff_members.get(approved_by) if approved_by else None
-            user_who_approved = staff_approver.user if staff_approver else None
-
-            clearance = Clearance.objects.create(
-                id=clearance_id,
-                student=students[student_id],
-                clearance_type=clearance_types[type_id],
-                status=status,
-                initiated_by=user_who_initiated,
-                initiated_at=parse_datetime(initiated_at),
-                submitted_at=parse_datetime(submitted_at),
-                final_approved_by=user_who_approved,
-                final_approved_at=parse_datetime(approved_at),
-                completed_at=parse_datetime(completed_at),
-            )
-
-            clearances[clearance_id] = clearance
-
-        self.stdout.write('Creating clearance-office records...')
-
-        clearance_offices_data = [
-            (
-                1001, 101, 1, 1, 'CLEARED',
-                'Student cleared by advisor.',
-                '2026-09-16T09:00:00'
-            ),
-            (
-                1002, 101, 2, 1, 'CLEARED',
-                'No outstanding library materials.',
-                '2026-09-16T10:00:00'
-            ),
-            (
-                1003, 101, 3, 2, 'FLAGGED',
-                None,
-                '2026-09-16T11:00:00'
-            ),
-            (
-                1004, 101, 4, 3, 'PENDING',
-                None,
-                None
-            ),
-            (
-                1005, 101, 5, 1, 'PENDING',
-                None,
-                None
-            ),
-            (
-                1006, 101, 6, 2, 'PENDING',
-                None,
-                None
-            ),
-            (
-                2001, 102, 1, 2, 'CLEARED',
-                'Advisor clearance completed.',
-                '2026-09-11T09:00:00'
-            ),
-            (
-                2002, 102, 2, 1, 'CLEARED',
-                'Library clearance completed.',
-                '2026-09-11T10:00:00'
-            ),
-            (
-                2003, 102, 3, 2, 'CLEARED',
-                'Dormitory clearance completed.',
-                '2026-09-11T11:00:00'
-            ),
-            (
-                2004, 102, 4, 3, 'CLEARED',
-                'Sport clearance completed.',
-                '2026-09-12T09:00:00'
-            ),
-            (
-                2005, 102, 5, 1, 'CLEARED',
-                'No outstanding café balance.',
-                '2026-09-12T10:00:00'
-            ),
-            (
-                2006, 102, 6, 2, 'CLEARED',
-                'Faculty store clearance completed.',
-                '2026-09-12T11:00:00'
-            ),
-            (
-                3001, 103, 1, 3, 'CLEARED',
-                'Advisor clearance completed.',
-                '2026-08-22T09:00:00'
-            ),
-            (
-                3002, 103, 2, 1, 'CLEARED',
-                'Library clearance completed.',
-                '2026-08-22T10:00:00'
-            ),
-            (
-                3003, 103, 3, 2, 'CLEARED',
-                'Dormitory clearance completed.',
-                '2026-08-23T09:00:00'
-            ),
-            (
-                3004, 103, 4, 3, 'CLEARED',
-                'Sport clearance completed.',
-                '2026-08-23T10:00:00'
-            ),
-            (
-                3005, 103, 5, 1, 'CLEARED',
-                'Café clearance completed.',
-                '2026-08-24T09:00:00'
-            ),
-            (
-                3006, 103, 6, 2, 'CLEARED',
-                'Faculty store clearance completed.',
-                '2026-08-24T10:00:00'
-            ),
-        ]
-
-        clearance_offices = {}
-
-        for (
-            record_id,
-            clearance_id,
-            office_id,
-            officer_id,
-            status,
-            notes,
-            reviewed_at,
-        ) in clearance_offices_data:
-
-            clearance_offices[record_id] = ClearanceOffice.objects.create(
-                id=record_id,
-                clearance=clearances[clearance_id],
-                office=offices[office_id],
-                assigned_officer=staff_members[officer_id],
-                status=status,
-                notes=notes or '',
-                reviewed_at=parse_datetime(reviewed_at),
-            )
-
-        self.stdout.write('Creating issues...')
-
-        issues_data = [
-            (
-                1,
-                1003,
-                'Unreturned room key',
-                'The student has not returned the room key assigned to them.',
-                'OPEN',
-                102,
-                '2026-09-16T11:00:00',
-                None,
-                None,
-                '',
-            ),
-            (
-                2,
-                2005,
-                'Outstanding café balance',
-                'The student has an outstanding balance at the university café.',
-                'RESOLVED',
-                101,
-                '2026-09-12T09:30:00',
-                101,
-                '2026-09-13T14:00:00',
-                'Outstanding balance was paid by the student.',
-            ),
-        ]
-
-        issues = {}
-
-        for (
-            issue_id,
-            clearance_office_id,
-            reason,
-            description,
-            status,
-            created_by,
-            created_at,
-            resolved_by,
-            resolved_at,
-            resolution_note,
-        ) in issues_data:
-
-            issues[issue_id] = Issue.objects.create(
-                id=issue_id,
-                clearance_office=clearance_offices[
-                    clearance_office_id
-                ],
-                reason=reason,
-                description=description,
-                status=status,
-                created_by=users[created_by],
-                created_at=parse_datetime(created_at),
-                resolved_by=(
-                    users[resolved_by]
-                    if resolved_by
-                    else None
-                ),
-                resolved_at=parse_datetime(resolved_at),
-                resolution_note=resolution_note,
-            )
-
-        self.stdout.write('Creating notifications...')
-
-        notifications_data = [
-            (
-                1, 1,
-                'Clearance Initiated',
-                'Your clearance has been initiated by the Registrar.',
-                'CLEARANCE',
-                False,
-                101,
-                None,
-                '2026-09-15T09:35:00',
-            ),
-            (
-                2, 1,
-                'Clearance Issue',
-                'The Dormitory office has reported an issue with your clearance.',
-                'ISSUE',
-                False,
-                101,
-                1,
-                '2026-09-16T11:05:00',
-            ),
-            (
-                3, 2,
-                'Clearance Ready for Final Approval',
-                'All required offices have cleared your graduation clearance. It is now waiting for Registrar approval.',
-                'CLEARANCE',
-                True,
-                102,
-                None,
-                '2026-09-13T15:00:00',
-            ),
-            (
-                4, 3,
-                'Clearance Completed',
-                'Your graduation clearance has been completed successfully.',
-                'CLEARANCE',
-                True,
-                103,
-                None,
-                '2026-08-25T14:05:00',
-            ),
-        ]
-
-        for (
-            notification_id,
-            user_id,
-            title,
-            message,
-            notification_type,
-            is_read,
-            clearance_id,
-            issue_id,
-            created_at,
-        ) in notifications_data:
-
-            Notification.objects.create(
-                id=notification_id,
-                user=users[user_id],
-                title=title,
-                message=message,
-                type=notification_type,
-                is_read=is_read,
-                clearance=(
-                    clearances[clearance_id]
-                    if clearance_id
-                    else None
-                ),
-                issue=(
-                    issues[issue_id]
-                    if issue_id
-                    else None
-                ),
-                created_at=parse_datetime(created_at),
-            )
-
-        self.stdout.write('Creating audit logs...')
-
-        audit_logs_data = [
-            (
-                1,
-                201,
-                'CLEARANCE_INITIATED',
-                'Registrar initiated clearance for BDU00123.',
-                'Clearance',
-                101,
-                '2026-09-15T09:30:00',
-            ),
-            (
-                2,
-                102,
-                'ISSUE_CREATED',
-                'Dormitory officer created an issue for BDU00123.',
-                'Issue',
-                1,
-                '2026-09-16T11:00:00',
-            ),
-            (
-                3,
-                101,
-                'ISSUE_RESOLVED',
-                'Café issue for BDU00124 was resolved.',
-                'Issue',
-                2,
-                '2026-09-13T14:00:00',
-            ),
-            (
-                4,
-                201,
-                'CLEARANCE_APPROVED',
-                'Registrar approved clearance for BDU00125.',
-                'Clearance',
-                103,
-                '2026-08-25T14:00:00',
-            ),
-        ]
-
-        for (
-            log_id,
-            user_id,
-            action,
-            description,
-            entity_type,
-            entity_id,
-            created_at,
-        ) in audit_logs_data:
-
-            AuditLog.objects.create(
-                id=log_id,
-                user=users[user_id],
-                action=action,
-                description=description,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                created_at=parse_datetime(created_at),
-            )
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                'Mock data seeded successfully.'
-            )
+    def _seed_staff(self, offices, departments, sections):
+        self._staff(
+            university_id=ADMIN[0], full_name=ADMIN[1], role=User.Role.ADMIN, number=1,
+            is_staff=True, is_superuser=True,
         )
-        self.stdout.write(
-            f'All users use password: {SEED_PASSWORD}'
-        )
+        self._staff(university_id=REGISTRAR[0], full_name=REGISTRAR[1], role=User.Role.REGISTRAR, number=2)
+
+        officers = {}
+        for number, (university_id, full_name, office_code) in enumerate(OFFICERS, start=10):
+            officers[office_code] = self._staff(
+                university_id=university_id, full_name=full_name, role=User.Role.OFFICER, number=number,
+            )
+
+        # The advisor is picked by faculty + department + section: one assignment per section.
+        for department in departments:
+            for section in sections[department.pk]:
+                self._assign(
+                    officers['ADVISOR'], offices['ADVISOR'],
+                    faculty=department.faculty, department=department, section=section,
+                )
+
+        # The faculty store is picked by faculty alone: one assignment per faculty.
+        for faculty in {department.faculty for department in departments}:
+            self._assign(officers['FACULTY_STORE'], offices['FACULTY_STORE'], faculty=faculty)
+
+        # Every other office has one officer for the whole university.
+        for code in ('LIBRARY', 'DORMITORY', 'SPORT', 'CAFE'):
+            self._assign(officers[code], offices[code])
+
+    def _seed_students(self, departments, sections):
+        for index, full_name in enumerate(STUDENT_NAMES):
+            department = departments[(index // STUDENTS_PER_DEPARTMENT) % len(departments)]
+            section = sections[department.pk][SECTION_PATTERN[index % len(SECTION_PATTERN)]]
+            student_id = f'BDU{index + 1:05d}'
+
+            user = self._user(university_id=student_id, full_name=full_name, role=User.Role.STUDENT)
+            _, created = Student.objects.get_or_create(
+                user=user,
+                defaults={
+                    'student_id': student_id,
+                    'full_name': full_name,
+                    'faculty': department.faculty,
+                    'department': department,
+                    'section': section,
+                    'year': section.year,
+                    'email': user.email or f'{student_id.lower()}@example.edu',
+                    'phone': make_phone(100 + index),
+                },
+            )
+            if created:
+                self._count('student profiles')
+
+            self.student_rows.append((student_id, full_name, department.name, section.name, section.year))
+
+    # ---------- output ----------
+
+    def _report(self):
+        out = self.stdout
+        out.write(self.style.SUCCESS('Seed data is ready.'))
+
+        if self.counts:
+            for label, number in self.counts.items():
+                out.write(f'  created {number} {label}')
+        else:
+            out.write('  nothing new was created: everything already existed.')
+
+        if self.existing_users:
+            out.write(self.style.WARNING(
+                f'  {len(self.existing_users)} account(s) already existed and were left unchanged '
+                f'(their passwords were NOT reset): {", ".join(self.existing_users)}'
+            ))
+
+        out.write('')
+        out.write(f'Password for every new account: {self.password}')
+        out.write('Log in with the University ID:')
+        out.write('')
+        out.write(f'  {ADMIN[0]:<8} Admin       {ADMIN[1]} (also a superuser for /admin/)')
+        out.write(f'  {REGISTRAR[0]:<8} Registrar   {REGISTRAR[1]}')
+
+        office_names = {code: name for code, name, _ in OFFICES}
+        for university_id, full_name, office_code in OFFICERS:
+            out.write(f'  {university_id:<8} Officer     {full_name} ({office_names[office_code]})')
+
+        out.write('')
+        for student_id, full_name, department, section, year in self.student_rows:
+            out.write(f'  {student_id}  {full_name:<19} {department}, Section {section}, Year {year}')

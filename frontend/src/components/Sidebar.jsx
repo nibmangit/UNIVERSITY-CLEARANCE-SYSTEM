@@ -25,12 +25,13 @@ const NAV_LINKS = {
     { label: 'Completed', path: '/registrar/completed' },
     { label: 'Notifications', path: '/registrar/notifications' },
   ],
+  ADMIN: [
+    { label: 'Dashboard', path: '/admin', end: true },
+    { label: 'Activity log', path: '/admin/logs' },
+  ],
 };
 
-/**
- * Large screens: a fixed column on the left.
- * Small screens: a slide-in menu, opened from the navbar (`open`) and closed with `onClose`.
- */
+
 function Sidebar({ open = false, onClose, onLogout }) {
   const { role } = useAuth();
   const links = NAV_LINKS[role] ?? [];
