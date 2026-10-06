@@ -1,23 +1,43 @@
+"""
+Django settings.
 
+Configuration comes from environment variables. The defaults are for local development,
+so `python manage.py runserver` keeps working with no setup.
+"""
 import os
-import dj_database_url
 from pathlib import Path
-from dotenv import load_dotenv
+
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+def env_list(name, default=''):
+    """Reads a comma-separated environment variable as a list."""
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
 
-# 1. Environment-driven Security Settings
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-_4^)=bhts^xn+i)zd8^f#zqtegv6w+in*!cf(*y8r1if4ait!h')
-DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+# ---------- Core ----------
 
-# Application definition
+ON_RENDER = bool(os.environ.get('RENDER'))  # Render sets this variable automatically
+
+# Debug is on locally and off on Render unless you say otherwise.
+DEBUG = os.environ.get('DEBUG', 'False' if ON_RENDER else 'True').lower() == 'true'
+
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-development-only-key'
+    else:
+        raise ImproperlyConfigured('Set the SECRET_KEY environment variable.')
+
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):  # also set by Render
+    ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
+
+
+# ---------- Applications ----------
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -26,10 +46,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    'corsheaders',
+
     'rest_framework',
-    
+    'corsheaders',
+
     'accounts',
     'clearance',
     'notifications',
@@ -67,54 +87,51 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# 2. Database Configuration (Uses DATABASE_URL on Render, falls back to SQLite locally)
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600
-    )
-}
+# ---------- Database ----------
+# Render provides DATABASE_URL. Without it (your computer) the project keeps using SQLite.
 
-# Password validation
-# https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+
+# ---------- Passwords and language ----------
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/6.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.1/howto/static-files/
+# ---------- Static files (the Django admin's CSS and JavaScript) ----------
+
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+if not DEBUG:
+    STORAGES['staticfiles'] = {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'}
 
 
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+# ---------- Email (unchanged from before) ----------
 
 MAILERS = {
     'default': {
@@ -123,15 +140,13 @@ MAILERS = {
 }
 
 
-# Custom configuration
+# ---------- Custom configuration ----------
+
 AUTH_USER_MODEL = 'accounts.User'
 
-
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
     'accounts.backends.UniversityIDBackend',
 ]
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -139,25 +154,17 @@ REST_FRAMEWORK = {
     ),
 }
 
-# 4. Dynamic CORS and CSRF Setup
-CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.environ.get(
-        'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,https://university-clearance-system-1.vercel.app'
-    ).split(',') if origin.strip()
-]
 
-# CRITICAL FIX: Django blocks POST requests from cross-origin domains without this
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in os.environ.get(
-        'CSRF_TRUSTED_ORIGINS',
-        'https://university-clearance-system-1.vercel.app,https://university-clearance-system-jymx.onrender.com'
-    ).split(',') if origin.strip()
-]
+# ---------- Which websites may call the API, and production security ----------
 
-CORS_ALLOW_CREDENTIALS = True
+# The addresses of the frontend, with no trailing slash. Set CORS_ALLOWED_ORIGINS on Render
+# to your Vercel address (several are allowed, separated by commas).
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
 
-# 5. Reverse Proxy Settings for Render/Cloudflare (Fixes HTTP/HTTPS header mismatch)
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-USE_X_FORWARDED_PORT = True
+# Needed for logging in to the Django admin on the Render address.
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
