@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import CertificateActions from '../../components/CertificateActions';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
@@ -40,16 +41,26 @@ const COLUMNS = [
     render: (row) => <StatusBadge status={row.status} />,
   },
   {
-    key: 'action',
-    header: <span className="sr-only">Actions</span>,
-    align: 'right',
-    render: (row) => (
-      <Button to={`/student/clearance/${row.id}`} size="sm" variant="secondary">
-        View
-        <span className="sr-only"> clearance #{row.id}</span>
+  key: 'action',
+  header: <span className="sr-only">Actions</span>,
+  align: 'right',
+  render: (row) => (
+    <div className="flex items-center justify-end gap-1.5 sm:gap-2 whitespace-nowrap">
+      <Button
+        to={`/student/clearance/${row.id}`}
+        size="sm"
+        variant="secondary"
+        title={`Details of clearance #${row.id}`}
+        aria-label={`Details of clearance #${row.id}`}
+      >
+        <span className="sm:inline">Details</span>
+        <span className="sr-only"> of clearance #{row.id}</span>
       </Button>
-    ),
-  },
+
+      <CertificateActions clearance={row} size="sm" />
+    </div>
+  ),
+}
 ];
 
 // Everything a student might type to find a clearance, in one lowercase string.

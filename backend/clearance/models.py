@@ -83,6 +83,9 @@ class Clearance(models.Model):
     )
     
     reason = models.CharField(max_length=200, blank=True, default='')
+    certificate_code = models.CharField(
+        max_length=20, unique=True, null=True, blank=True, editable=False,
+    )
 
     initiated_by = models.ForeignKey(
         'accounts.User', on_delete=models.PROTECT,

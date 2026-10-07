@@ -5,6 +5,7 @@ from .views import (
     OfficerClearanceListView, OfficerIssueListView, RegistrarClearanceListView, RegistrarIssueListView,
     ResolveIssueView,
 )
+from .document_views import CertificateVerifyView, ClearanceDocumentView
 from .dashboard_view import OfficerDashboardView, RegistrarDashboardView, StudentDashboardView
 
 urlpatterns = [
@@ -13,6 +14,8 @@ urlpatterns = [
     
     path('create/', ClearanceCreateView.as_view(), name='clearance-create'),
     path('<int:pk>/approve/', FinalApproveClearanceView.as_view(), name='clearance-final-approve',),
+    path('<int:pk>/document/', ClearanceDocumentView.as_view(), name='clearance-document'),
+    path('verify/<str:code>/', CertificateVerifyView.as_view(), name='certificate-verify'),
     
     path('issues/', OfficerIssueListView.as_view(), name='officer-issue-list',),
     path('issues/<int:pk>/resolve/', ResolveIssueView.as_view(), name='issue-resolve',),

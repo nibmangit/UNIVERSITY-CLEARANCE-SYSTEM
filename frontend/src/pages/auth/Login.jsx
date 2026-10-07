@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../utils/errors';
 
@@ -270,6 +271,16 @@ export default function Login() {
 
           <p className="mt-8 text-sm text-slate-500">
             Can't log in? Contact the registrar's office to check your account.
+          </p>
+
+          <p className="mt-3 text-sm text-slate-600">
+            Checking a clearance certificate?{' '}
+            <Link
+              to="/verify"
+              className="font-medium text-sky-800 underline hover:text-sky-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800"
+            >
+              Verify a certificate
+            </Link>
           </p>
         </div>
       </main>

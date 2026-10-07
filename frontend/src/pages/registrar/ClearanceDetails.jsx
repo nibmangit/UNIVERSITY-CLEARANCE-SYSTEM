@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import CertificateActions from '../../components/CertificateActions';
 import ClearanceProgress from '../../components/ClearanceProgress';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
@@ -105,6 +106,9 @@ function ApprovalCard({ clearance, progress, onApprove }) {
           Completed on {formatDateTime(clearance.completed_at)}. Approved by{' '}
           {clearance.final_approved_by?.full_name ?? 'the registrar'}.
         </Alert>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <CertificateActions clearance={clearance} />
+        </div>
       </Card>
     );
   }
@@ -133,6 +137,7 @@ function ApprovalCard({ clearance, progress, onApprove }) {
           {ready ? `All ${progress.total} offices have been cleared.` : blockedMessage(progress)}
         </p>
       </div>
+      <p className="mt-4 text-sm text-slate-500">The certificate becomes available after final approval.</p>
     </Card>
   );
 }

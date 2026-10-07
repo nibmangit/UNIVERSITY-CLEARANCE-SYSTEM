@@ -12,6 +12,7 @@ export const ACTION_TONES = {
   OFFICER_RESOLVED_ISSUE: 'sky',
   REGISTRAR_INITIATED_CLEARANCE: 'slate',
   REGISTRAR_FINAL_APPROVAL: 'emerald',
+  DOCUMENT_DOWNLOADED: 'sky',
 };
 
 /** "OFFICER_CLEARED_OFFICE" becomes "Officer cleared office" */

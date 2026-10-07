@@ -30,6 +30,8 @@ import RegistrarClearanceDetails from '../pages/registrar/ClearanceDetails';
 import RegistrarIssues from '../pages/registrar/Issues';
 import RegistrarCompleted from '../pages/registrar/Completed';
 
+import Verify from '../pages/public/Verify';
+
 function HomeRedirect() {
   const { role } = useAuth();
   return <Navigate to={homePathForRole(role)} replace />;
@@ -42,6 +44,9 @@ function AppRoutes() {
       <Route element={<PublicOnlyRoute />}>
         <Route path="/login" element={<Login />} />
       </Route>
+
+      <Route path="/verify" element={<Verify />} />
+      <Route path="/verify/:code" element={<Verify />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomeRedirect />} />

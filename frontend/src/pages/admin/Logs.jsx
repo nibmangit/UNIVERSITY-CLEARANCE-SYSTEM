@@ -25,6 +25,7 @@ const ROLE_OPTIONS = [
   { value: 'OFFICER', label: 'Officer' },
   { value: 'REGISTRAR', label: 'Registrar' },
   { value: 'ADMIN', label: 'Admin' },
+  { value: 'STUDENT', label: 'Student' },
 ];
 
 export default function Logs() {

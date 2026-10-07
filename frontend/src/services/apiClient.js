@@ -53,8 +53,12 @@ function networkError() {
   return new ApiError({ message: NETWORK_MESSAGE, status: 0 });
 }
 
-async function send(path, { method, body, signal, token }) {
-  const headers = { Accept: 'application/json' };
+async function send(path, { method, body, signal, token, responseType }) {
+  const wantsFile = responseType === 'blob';
+
+  // The backend only accepts a request whose Accept header includes a format it can render (JSON).
+  // So a file request lists JSON too, which is also how an error comes back readable.
+  const headers = { Accept: wantsFile ? 'application/pdf, application/json' : 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -69,6 +73,11 @@ async function send(path, { method, body, signal, token }) {
   } catch (error) {
     if (error?.name === 'AbortError') throw error;
     throw networkError();
+  }
+
+  // A successful file request returns the raw file. Anything else (an error) is read as JSON text.
+  if (wantsFile && response.ok) {
+    return { response, data: await response.blob() };
   }
 
   const text = await response.text();
@@ -110,9 +119,9 @@ function refreshAccessToken() {
   return refreshPromise;
 }
 
-async function request(method, path, { body, auth = true, signal } = {}) {
+async function request(method, path, { body, auth = true, signal, responseType } = {}) {
   let token = auth ? tokenStorage.getAccess() : null;
-  let { response, data } = await send(path, { method, body, signal, token });
+  let { response, data } = await send(path, { method, body, signal, token, responseType });
 
   if (response.status === 401 && auth && tokenStorage.getRefresh()) {
     try {
@@ -123,7 +132,7 @@ async function request(method, path, { body, auth = true, signal } = {}) {
       endSession();
       throw new ApiError({ ...parseApiError(null, 401), status: 401 });
     }
-    ({ response, data } = await send(path, { method, body, signal, token }));
+    ({ response, data } = await send(path, { method, body, signal, token, responseType }));
   }
 
   if (!response.ok) {
@@ -141,4 +150,7 @@ export const api = {
   patch: (path, body, options) => request('PATCH', path, { ...options, body }),
   put: (path, body, options) => request('PUT', path, { ...options, body }),
   delete: (path, options) => request('DELETE', path, options),
+
+  /** Downloads a file as a Blob. Errors still come back as an ApiError with a readable message. */
+  getBlob: (path, options) => request('GET', path, { ...options, responseType: 'blob' }),
 };

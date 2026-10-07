@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
+import CertificateActions from '../../components/CertificateActions';
 import Card from '../../components/ui/Card';
 import DetailList from '../../components/ui/DetailList';
 import EmptyState from '../../components/ui/EmptyState';
@@ -206,7 +207,12 @@ function ClearanceView({ id }) {
         description={`${clearance.clearance_type?.name ?? 'Clearance'} · Started ${formatDate(clearance.initiated_at)}`}
         backTo={id ? '/student/history' : undefined}
         backLabel="Back to history"
-        actions={<StatusBadge status={clearance.status} />}
+        actions={
+          <>
+            <StatusBadge status={clearance.status} />
+            <CertificateActions clearance={clearance} />
+          </>
+        }
       />
 
       <div className="grid gap-6 lg:grid-cols-3">

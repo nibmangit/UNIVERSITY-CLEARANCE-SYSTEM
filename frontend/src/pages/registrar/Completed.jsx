@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import CertificateActions from '../../components/CertificateActions';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
@@ -62,16 +63,27 @@ const COLUMNS = [
     render: (row) => <StatusBadge status={row.status} />,
   },
   {
-    key: 'action',
-    header: <span className="sr-only">Actions</span>,
-    align: 'right',
-    render: (row) => (
-      <Button to={`/registrar/clearances/${row.id}`} size="sm" variant="secondary">
-        View
-        <span className="sr-only"> clearance #{row.id}</span>
+  key: 'action',
+  header: <span className="sr-only">Actions</span>,
+  align: 'right',
+  render: (row) => (
+    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+      <Button 
+        to={`/registrar/clearances/${row.id}`} 
+        size="sm" 
+        variant="secondary"
+        aria-label={`Details of clearance #${row.id}`}
+        title={`Details of clearance #${row.id}`}
+      > 
+        <span className=" sm:inline">Details</span>
+        <span className="sr-only"> of clearance #{row.id}</span>
       </Button>
-    ),
-  },
+
+      {/* Pass responsive state/props to your custom component */}
+      <CertificateActions clearance={row} size="sm" iconOnlyOnMobile />
+    </div>
+  ),
+}
 ];
 
 function searchText(row) {

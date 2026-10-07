@@ -152,6 +152,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'verify': '30/minute',
+    },
 }
 
 
@@ -168,3 +171,14 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    
+    
+# ---------- Clearance certificate (PDF) ----------
+
+UNIVERSITY_NAME = os.environ.get('UNIVERSITY_NAME', 'Bahir Dar University Poly Campus')
+
+# The address of the frontend. The QR code on the certificate points to FRONTEND_URL/verify/<code>.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+
+# The time zone that dates on the certificate are shown in.
+CERTIFICATE_TIME_ZONE = os.environ.get('CERTIFICATE_TIME_ZONE', 'Africa/Addis_Ababa')
