@@ -13,11 +13,6 @@ import { clearanceService } from '../../services/clearanceService';
 import { formatCode } from '../../utils/certificateCode';
 import { homePathForRole } from '../../utils/roles';
 
-/** "k7m29qxp4twd" becomes "K7M2-9QXP-4TWD". Anything that is not a letter or digit is dropped. */
-function formatCode(value) {
-  const cleaned = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 12);
-  return cleaned.match(/.{1,4}/g)?.join('-') ?? '';
-}
 
 function CodeForm({ initial = '', onSubmit }) {
   const [code, setCode] = useState(formatCode(initial));
