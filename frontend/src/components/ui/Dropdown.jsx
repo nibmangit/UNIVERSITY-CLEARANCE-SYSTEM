@@ -4,11 +4,13 @@ import { cx, focusRing } from './styles';
 
 const DropdownContext = createContext({ close: () => {} });
 
+
 export default function Dropdown({
   trigger,
   label,
   title,
   align = 'right',
+  fullWidthOnMobile = false,
   buttonClassName,
   panelClassName,
   children,
@@ -43,6 +45,19 @@ export default function Dropdown({
     };
   }, [open]);
 
+  const alignSide = align === 'right' ? 'right-0' : 'left-0';
+  const smAlignSide = align === 'right' ? 'sm:right-0' : 'sm:left-0';
+
+  const placement = fullWidthOnMobile
+    ? cx(
+        // Phones: pinned under the 4rem top bar, 0.75rem from each side, never taller than the screen.
+        'fixed inset-x-3 top-[4.25rem] max-h-[calc(100dvh-5.5rem)] overflow-y-auto',
+        // Larger screens: hangs under the button.
+        'sm:absolute sm:inset-x-auto sm:top-auto sm:mt-2 sm:max-h-none sm:overflow-visible',
+        smAlignSide,
+      )
+    : cx('absolute mt-2', alignSide);
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -62,8 +77,8 @@ export default function Dropdown({
         <div
           id={panelId}
           className={cx(
-            'absolute z-30 mt-2 min-w-56 rounded-lg border border-slate-200 bg-white shadow-lg',
-            align === 'right' ? 'right-0' : 'left-0',
+            'z-30 min-w-56 rounded-lg border border-slate-200 bg-white shadow-lg',
+            placement,
             panelClassName,
           )}
         >

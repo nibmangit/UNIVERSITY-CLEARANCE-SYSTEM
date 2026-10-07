@@ -56,8 +56,9 @@ export default function VerifyMenu() {
     <Dropdown
       label="Verify a certificate"
       title="Verify a certificate"
+      fullWidthOnMobile
       buttonClassName="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-      panelClassName="w-80 max-w-[calc(100vw-2rem)]"
+      panelClassName="sm:w-80"
       trigger={
         <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" strokeLinejoin="round" />

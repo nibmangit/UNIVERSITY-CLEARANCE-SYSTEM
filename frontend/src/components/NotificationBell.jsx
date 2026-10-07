@@ -123,8 +123,9 @@ export default function NotificationBell({ viewAllTo, clearancePath }) {
   return (
     <Dropdown
       label={count > 0 ? `Notifications, ${count} unread` : 'Notifications'}
+      fullWidthOnMobile
       buttonClassName="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-      panelClassName="w-80 max-w-[calc(100vw-2rem)] sm:w-96"
+      panelClassName="sm:w-96"
       trigger={
         <>
           <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
