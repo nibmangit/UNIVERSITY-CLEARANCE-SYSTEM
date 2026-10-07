@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -8,7 +8,10 @@ import ErrorState from '../../components/ui/ErrorState';
 import Input from '../../components/ui/Input';
 import { SkeletonText } from '../../components/ui/Skeleton';
 import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../hooks/useAuth';
 import { clearanceService } from '../../services/clearanceService';
+import { formatCode } from '../../utils/certificateCode';
+import { homePathForRole } from '../../utils/roles';
 
 /** "k7m29qxp4twd" becomes "K7M2-9QXP-4TWD". Anything that is not a letter or digit is dropped. */
 function formatCode(value) {
@@ -163,6 +166,7 @@ function Result({ code, onCheckAnother, onCheckCode }) {
 
 export default function Verify() {
   const { code } = useParams();
+  const { status, role } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -192,12 +196,22 @@ export default function Verify() {
           </Card>
         )}
 
-        <p className="mt-6 text-center text-sm text-slate-600">
-          Student or university staff?{' '}
-          <Link to="/login" className="font-medium text-sky-800 underline hover:text-sky-900">
-            Log in
-          </Link>
-        </p>
+        {status !== 'loading' && (
+          <p className="mt-6 text-center text-sm text-slate-600">
+            {role ? (
+              <Link to={homePathForRole(role)} className="font-medium text-sky-800 underline hover:text-sky-900">
+                Back to dashboard
+              </Link>
+            ) : (
+              <>
+                Student or university staff?{' '}
+                <Link to="/login" className="font-medium text-sky-800 underline hover:text-sky-900">
+                  Log in
+                </Link>
+              </>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

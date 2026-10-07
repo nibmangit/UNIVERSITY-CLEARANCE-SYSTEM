@@ -9,15 +9,13 @@ const NAV_LINKS = {
     { label: 'Clearance', path: '/student/clearance' },
     { label: 'History', path: '/student/history' },
     { label: 'Notifications', path: '/student/notifications' },
-    { label: 'Profile', path: '/student/profile' },
-    { label: 'Verify Certificate', path: '/registrar/verify' },
+    { label: 'Profile', path: '/student/profile' }, 
   ],
   OFFICER: [
     { label: 'Dashboard', path: '/officer', end: true },
     { label: 'Clearances', path: '/officer/clearances' },
     { label: 'Issues', path: '/officer/issues' },
-    { label: 'Notifications', path: '/officer/notifications' },
-    { label: 'Verify Certificate', path: '/registrar/verify' },
+    { label: 'Notifications', path: '/officer/notifications' }, 
   ],
   REGISTRAR: [
     { label: 'Dashboard', path: '/registrar', end: true },
@@ -25,13 +23,11 @@ const NAV_LINKS = {
     { label: 'Clearances', path: '/registrar/clearances' },
     { label: 'Issues', path: '/registrar/issues' },
     { label: 'Completed', path: '/registrar/completed' },
-    { label: 'Notifications', path: '/registrar/notifications' },
-    { label: 'Verify Certificate', path: '/registrar/verify' },
+    { label: 'Notifications', path: '/registrar/notifications' }, 
   ],
   ADMIN: [
     { label: 'Dashboard', path: '/admin', end: true },
-    { label: 'Activity log', path: '/admin/logs' },
-    { label: 'Verify Certificate', path: '/registrar/verify' },
+    { label: 'Activity log', path: '/admin/logs' }, 
   ],
 };
 

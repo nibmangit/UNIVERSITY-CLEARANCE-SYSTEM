@@ -5,6 +5,7 @@ import { cx } from './ui/styles';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
+import VerifyMenu from './VerifyMenu';
 
 // A role gets the bell once its notifications page exists.
 const NOTIFICATION_PAGES = {
@@ -49,6 +50,7 @@ export default function Navbar({ onMenuClick, onLogout }) {
       </div>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <VerifyMenu />
         {bell && <NotificationBell viewAllTo={bell.viewAllTo} clearancePath={bell.clearancePath} />}
         <UserMenu
           name={profile?.full_name}

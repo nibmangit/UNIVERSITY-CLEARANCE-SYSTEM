@@ -7,6 +7,7 @@ const DropdownContext = createContext({ close: () => {} });
 export default function Dropdown({
   trigger,
   label,
+  title,
   align = 'right',
   buttonClassName,
   panelClassName,
@@ -48,6 +49,7 @@ export default function Dropdown({
         ref={buttonRef}
         type="button"
         aria-label={label}
+        title={title}
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((value) => !value)}
