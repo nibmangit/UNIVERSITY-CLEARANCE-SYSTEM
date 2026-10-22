@@ -11,6 +11,11 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT, )
     university_id = models.CharField(max_length=50, unique=True, null=True, blank=True, )
+    
+    tenant = models.ForeignKey(
+        'tenants.Tenant', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='users', 
+        )
 
     def __str__(self):
         return self.username
