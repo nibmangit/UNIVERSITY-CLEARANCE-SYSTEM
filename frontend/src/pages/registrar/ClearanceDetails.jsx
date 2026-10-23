@@ -7,6 +7,7 @@ import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import Input from '../../components/ui/Input';
 import DetailList from '../../components/ui/DetailList';
 import ErrorState from '../../components/ui/ErrorState';
 import PageHeader from '../../components/ui/PageHeader';
@@ -96,7 +97,53 @@ function IssueItem({ issue }) {
   );
 }
 
-function ApprovalCard({ clearance, progress, onApprove }) {
+function CancelModal({ clearance, onClose, onDone, onStale }) {
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  async function confirm() {
+    setSubmitting(true);
+    setError('');
+    try {
+      await clearanceService.cancel(clearance.id, { reason: reason.trim() });
+      onDone();
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setSubmitting(false);
+      if (err.status === 400) onStale();
+    }
+  }
+
+  return (
+    <ConfirmModal
+      open
+      title="Cancel clearance"
+      message={`Are you sure you want to cancel clearance #${clearance.id} for ${clearance.student?.full_name}? This action cannot be undone.`}
+      confirmLabel="Cancel clearance"
+      confirmTone="danger"
+      loading={submitting}
+      onConfirm={confirm}
+      onCancel={onClose}
+    >
+      <div className="mt-4">
+        <Input
+          label="Reason for cancellation (optional)"
+          placeholder="e.g. Student withdrew request or error in initiation"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+      </div>
+      {error && (
+        <Alert tone="error" className="mt-4">
+          {error}
+        </Alert>
+      )}
+    </ConfirmModal>
+  );
+}
+
+function ApprovalCard({ clearance, progress, onApprove, onCancel }) {
   const { status } = clearance;
 
   if (status === CLEARANCE_STATUS.COMPLETED) {
@@ -129,14 +176,17 @@ function ApprovalCard({ clearance, progress, onApprove }) {
       title="Final approval"
       description="Complete the clearance once every office has cleared the student."
     >
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         <Button disabled={!ready} onClick={onApprove} aria-describedby="approval-status">
           Final approve
         </Button>
-        <p id="approval-status" className={cx('text-sm', ready ? 'font-medium text-emerald-800' : 'text-slate-600')}>
-          {ready ? `All ${progress.total} offices have been cleared.` : blockedMessage(progress)}
-        </p>
+        <Button variant="danger-ghost" onClick={onCancel}>
+          Cancel clearance
+        </Button>
       </div>
+      <p id="approval-status" className={cx('mt-3 text-sm', ready ? 'font-medium text-emerald-800' : 'text-slate-600')}>
+        {ready ? `All ${progress.total} offices have been cleared.` : blockedMessage(progress)}
+      </p>
       <p className="mt-4 text-sm text-slate-500">The certificate becomes available after final approval.</p>
     </Card>
   );
@@ -193,6 +243,7 @@ function DetailsView({ id }) {
   const fetcher = useCallback((options) => clearanceService.get(id, options), [id]);
   const { data: clearance, loading, error, reload } = useApi(fetcher);
   const [approving, setApproving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const header = <PageHeader title="Clearance" backTo="/registrar/clearances" backLabel="Back to clearances" />;
 
@@ -255,7 +306,7 @@ function DetailsView({ id }) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <ApprovalCard clearance={clearance} progress={progress} onApprove={() => setApproving(true)} />
+          <ApprovalCard clearance={clearance} progress={progress} onApprove={() => setApproving(true)} onCancel={() => setCancelling(true)} />
 
           <Card title="Offices" padded={false}>
             <Table caption="Office clearance status" columns={OFFICE_COLUMNS} rows={offices} />
@@ -306,6 +357,19 @@ function DetailsView({ id }) {
           </Card>
         </div>
       </div>
+
+            {cancelling && (
+        <CancelModal
+          clearance={clearance}
+          onClose={() => setCancelling(false)}
+          onDone={() => {
+            setCancelling(false);
+            toast.success('Clearance has been cancelled.');
+            reload();
+          }}
+          onStale={reload}
+        />
+      )}
 
       {approving && (
         <ApproveModal

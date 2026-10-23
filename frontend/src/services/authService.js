@@ -23,4 +23,6 @@ export const authService = {
 
   me: (options) => api.get('/auth/me/', options),
   profile: (options) => api.get('/auth/profile/', options),
+  changePassword: ({ oldPassword, newPassword }, options) =>
+    api.post('/auth/change-password/', { old_password: oldPassword, new_password: newPassword }, options),
 };

@@ -1,16 +1,131 @@
+import { useState } from 'react';
+
 import Avatar from '../../components/ui/Avatar';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import DetailList from '../../components/ui/DetailList';
 import ErrorState from '../../components/ui/ErrorState';
+import Input from '../../components/ui/Input';
+import Modal from '../../components/ui/Modal';
 import PageHeader from '../../components/ui/PageHeader';
 import Skeleton, { SkeletonText } from '../../components/ui/Skeleton';
 import { useApi } from '../../hooks/useApi';
+import { useToast } from '../../hooks/useToast';
 import { authService } from '../../services/authService';
+import { getErrorMessage } from '../../utils/errors';
+
+function ChangePasswordModal({ open, onClose }) {
+  const toast = useToast();
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setFieldErrors({});
+
+    if (!oldPassword) {
+      setFieldErrors({ old_password: 'Enter your current password.' });
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setFieldErrors({ new_password: 'Password must be at least 6 characters.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setFieldErrors({ confirm_password: 'Passwords do not match.' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await authService.changePassword({ oldPassword, newPassword });
+      toast.success('Password changed successfully.');
+      onClose();
+    } catch (err) {
+      if (err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+      } else {
+        setError(getErrorMessage(err));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Change password"
+      description="Enter your current password and pick a new one."
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <Alert tone="error">{error}</Alert>}
+
+        <Input
+          type="password"
+          label="Current password"
+          value={oldPassword}
+          onChange={(e) => setOldPassword(e.target.value)}
+          error={fieldErrors.old_password}
+          required
+          autoComplete="current-password"
+        />
+
+        <Input
+          type="password"
+          label="New password"
+          hint="At least 6 characters"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          error={fieldErrors.new_password}
+          required
+          autoComplete="new-password"
+        />
+
+        <Input
+          type="password"
+          label="Confirm new password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          error={fieldErrors.confirm_password}
+          required
+          autoComplete="new-password"
+        />
+
+        <div className="flex justify-end gap-3 pt-3">
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={submitting}>
+            Save new password
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
 
 export default function StudentProfile() {
   const { data: profile, loading, error, reload } = useApi(authService.profile);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
-  const header = <PageHeader title="My profile" />;
+  const header = (
+    <PageHeader
+      title="My profile"
+      actions={
+        <Button variant="secondary" onClick={() => setChangePasswordOpen(true)}>
+          Change password
+        </Button>
+      }
+    />
+  );
 
   if (error) {
     return (
@@ -91,6 +206,13 @@ export default function StudentProfile() {
         This information comes from the university records and cannot be changed here. If something is
         wrong, contact the registrar's office.
       </p>
+
+      {changePasswordOpen && (
+        <ChangePasswordModal
+          open={changePasswordOpen}
+          onClose={() => setChangePasswordOpen(false)}
+        />
+      )}
     </>
   );
 }

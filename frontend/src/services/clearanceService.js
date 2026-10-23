@@ -43,10 +43,12 @@ export const clearanceService = {
   },
 
   finalApprove: (id, options) => api.patch(`/clearances/${id}/approve/`, undefined, options),
-    listAllIssues: (options) => api.get('/clearances/registrar/issues/', options),
+  cancel: (id, { reason = '' } = {}, options) =>
+    api.patch(`/clearances/${id}/cancel/`, { reason }, options),
+  listAllIssues: (options) => api.get('/clearances/registrar/issues/', options),
 
 
-    // ------- Certificate -------//
+  // ------- Certificate -------//
   document: (id, options) => api.getBlob(`/clearances/${id}/document/`, options),
   
   verifyCertificate: (code, options) =>

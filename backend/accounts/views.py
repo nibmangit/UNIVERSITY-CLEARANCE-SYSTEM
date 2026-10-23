@@ -1,3 +1,4 @@
+from django.contrib.auth import update_session_auth_hash
 from django.db.models import Prefetch, Q
 from clearance.models import Clearance
 
@@ -10,6 +11,7 @@ from rest_framework.exceptions import NotFound
 from .models import Staff, Student, User
 from .permissions import IsRegistrar, IsStudent
 from .serializers import (
+    ChangePasswordSerializer,
     CurrentUserSerializer,
     LoginSerializer,
     RegistrarStudentSerializer,
@@ -87,3 +89,17 @@ class RegistrarStudentListView(APIView):
 
         serializer = RegistrarStudentSerializer(students, many=True)
         return Response(serializer.data)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save(update_fields=['password'])
+        update_session_auth_hash(request, request.user)
+
+        return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)

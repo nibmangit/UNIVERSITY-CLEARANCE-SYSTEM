@@ -75,3 +75,14 @@ class StaffProfileSerializer(serializers.ModelSerializer):
         model = Staff
         fields = ['employee_id', 'full_name', 'email', 'phone', 'is_active', ]
         read_only_fields = fields
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=6)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Current password is incorrect.')
+        return value

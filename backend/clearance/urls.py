@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import (
-    ClearanceCreateView, ClearanceDetailView, ClearanceListView, ClearanceOfficeProcessView, ClearanceTypeListView, FinalApproveClearanceView,
+    ClearanceCreateView, ClearanceDetailView, ClearanceListView, ClearanceOfficeProcessView, ClearanceTypeListView, CancelClearanceView, FinalApproveClearanceView,
     OfficerClearanceListView, OfficerIssueListView, RegistrarClearanceListView, RegistrarIssueListView,
     ResolveIssueView,
 )
@@ -14,6 +14,7 @@ urlpatterns = [
     
     path('create/', ClearanceCreateView.as_view(), name='clearance-create'),
     path('<int:pk>/approve/', FinalApproveClearanceView.as_view(), name='clearance-final-approve',),
+    path('<int:pk>/cancel/', CancelClearanceView.as_view(), name='clearance-cancel',),
     path('<int:pk>/document/', ClearanceDocumentView.as_view(), name='clearance-document'),
     path('verify/<str:code>/', CertificateVerifyView.as_view(), name='certificate-verify'),
     

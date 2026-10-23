@@ -171,6 +171,30 @@ class ResolveIssueView(APIView):
 
         return Response(response_serializer.data, )
         
+class CancelClearanceView(APIView):
+    permission_classes = [IsAuthenticated, IsRegistrar]
+
+    def patch(self, request, pk):
+        try:
+            clearance = (
+                Clearance.objects
+                .select_related(
+                    'student', 'student__faculty', 'student__department',
+                    'student__section', 'clearance_type', 'initiated_by', 'final_approved_by',
+                ).prefetch_related(
+                    'clearance_offices__office', 'clearance_offices__assigned_officer',
+                    'clearance_offices__issues__created_by', 'clearance_offices__issues__resolved_by',
+                ).get(pk=pk)
+            )
+        except Clearance.DoesNotExist:
+            raise NotFound('Clearance not found.')
+
+        reason = request.data.get('reason', '').strip()
+        clearance = ClearanceService.cancel_clearance(clearance=clearance, user=request.user, reason=reason)
+        serializer = ClearanceSerializer(clearance)
+        return Response(serializer.data)
+
+
 class FinalApproveClearanceView(APIView):
     permission_classes = [IsAuthenticated, IsRegistrar]
 

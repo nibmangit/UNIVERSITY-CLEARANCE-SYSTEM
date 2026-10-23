@@ -39,6 +39,11 @@ const FILTERS = [
     label: 'Has issues',
     test: (row) => ACTIVE.includes(row.status) && (row.progress?.flagged ?? 0) > 0,
   },
+  {
+    id: CLEARANCE_STATUS.CANCELLED,
+    label: 'Cancelled',
+    test: (row) => row.status === CLEARANCE_STATUS.CANCELLED,
+  },
   { id: 'all', label: 'All', test: () => true },
 ];
 

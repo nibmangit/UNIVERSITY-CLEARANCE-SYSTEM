@@ -313,7 +313,37 @@ class ClearanceService:
 
 
         return clearance
-    
+
+    @staticmethod
+    @transaction.atomic
+    def cancel_clearance(*, clearance: Clearance, user, reason=""):
+        if user.role not in [User.Role.REGISTRAR, User.Role.ADMIN]:
+            raise ValidationError("Only a registrar or admin can cancel a clearance.")
+
+        if clearance.status in [Clearance.Status.COMPLETED, Clearance.Status.CANCELLED]:
+            raise ValidationError(f"Cannot cancel a clearance that is already {clearance.status.lower()}.")
+
+        clearance.status = Clearance.Status.CANCELLED
+        clearance.save(update_fields=["status"])
+
+        AuditLogService.log(
+            user=user,
+            action="CLEARANCE_CANCELLED",
+            description=f"Clearance {clearance.id} was cancelled by {user.username}. Reason: {reason or 'No reason provided'}",
+            entity_type="Clearance",
+            entity_id=clearance.id,
+        )
+
+        NotificationService.create(
+            user=clearance.student.user,
+            title="Clearance Cancelled",
+            message=f"Your {clearance.clearance_type.name} clearance was cancelled. Reason: {reason or 'No reason provided'}.",
+            notification_type=Notification.Type.CLEARANCE,
+            clearance=clearance,
+        )
+
+        return clearance
+
     @staticmethod
     def update_clearance_status(clearance):
         offices = clearance.clearance_offices.all()

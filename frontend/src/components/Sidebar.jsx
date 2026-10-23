@@ -14,6 +14,7 @@ const NAV_LINKS = {
   OFFICER: [
     { label: 'Dashboard', path: '/officer', end: true },
     { label: 'Clearances', path: '/officer/clearances' },
+    { label: 'History', path: '/officer/history' },
     { label: 'Issues', path: '/officer/issues' },
     { label: 'Notifications', path: '/officer/notifications' }, 
   ],
