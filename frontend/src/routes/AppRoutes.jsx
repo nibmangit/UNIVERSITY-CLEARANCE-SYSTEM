@@ -21,6 +21,7 @@ import StudentProfile from '../pages/student/Profile';
 import OfficerDashboard from '../pages/officer/OfficerDashboard';
 import OfficerClearances from '../pages/officer/Clearances';
 import OfficerClearanceDetails from '../pages/officer/ClearanceDetails';
+import OfficerHistory from '../pages/officer/History';
 import OfficerIssues from '../pages/officer/Issues';
 
 import RegistrarDashboard from '../pages/registrar/RegistrarDashboard';
@@ -69,7 +70,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={[ROLES.OFFICER]} />}>
         <Route element={<Layout />}>
           <Route path="/officer/" element={<OfficerDashboard />} />
-          <Route path="/officer/clearances" element={<OfficerClearances />} />
+                    <Route path="/officer/clearances" element={<OfficerClearances />} />
+          <Route path="/officer/history" element={<OfficerHistory />} />
           <Route path="/officer/clearances/:id" element={<OfficerClearanceDetails />} />
           <Route path="/officer/issues" element={<OfficerIssues />} />
           <Route path="/officer/notifications" element={<Notifications />} />

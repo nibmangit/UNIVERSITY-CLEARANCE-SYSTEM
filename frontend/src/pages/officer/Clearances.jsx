@@ -163,7 +163,7 @@ export default function Clearances() {
           value={query}
           onChange={changeQuery}
           label="Search clearances"
-          placeholder="Student ID, name or clearance number"
+          placeholder="Search student ID, name, dept or clearance #"
         />
         <Tabs label="Filter by status" tabs={tabs} value={filter} onChange={changeFilter} />
       </div>

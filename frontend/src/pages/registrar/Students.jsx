@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Alert from '../../components/ui/Alert';
@@ -197,13 +197,13 @@ export default function Students() {
 
   const [term, setTerm] = useState('');
   const [termError, setTermError] = useState('');
-  const [search, setSearch] = useState({ status: 'idle', term: '', results: [], error: null });
+  const [search, setSearch] = useState({ status: 'loading', term: '', results: [], error: null });
   const [initiating, setInitiating] = useState(null);
   const latestRequest = useRef(0);
 
   const { page, setPage, pageItems, total } = usePagination(search.results, PAGE_SIZE);
 
-  const runSearch = useCallback((value) => {
+  const runSearch = useCallback((value = '') => {
     const id = ++latestRequest.current;
     setSearch((previous) => ({ ...previous, status: 'loading', term: value, error: null }));
 
@@ -216,6 +216,11 @@ export default function Students() {
         if (id === latestRequest.current) setSearch({ status: 'error', term: value, results: [], error });
       });
   }, []);
+
+  // Automatically load all students on first render
+  useEffect(() => {
+    runSearch('');
+  }, [runSearch]);
 
   function handleSubmit(event) {
     event.preventDefault();
