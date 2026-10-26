@@ -1,11 +1,12 @@
+import LanguageMenu from './LanguageMenu';
 import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
-import { focusRing } from './ui/styles';
-import { cx } from './ui/styles';
+import VerifyMenu from './VerifyMenu';
+import { focusRing, cx } from './ui/styles';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { authService } from '../services/authService';
-import VerifyMenu from './VerifyMenu';
 
 // A role gets the bell once its notifications page exists.
 const NOTIFICATION_PAGES = {
@@ -21,11 +22,11 @@ const NOTIFICATION_PAGES = {
     viewAllTo: '/registrar/notifications',
     clearancePath: (id) => `/registrar/clearances/${id}`,
   },
-  
 };
 
 export default function Navbar({ onMenuClick, onLogout }) {
   const { user, role } = useAuth();
+  const { t } = useLanguage();
   const { data: profile } = useApi(authService.profile);
   const bell = NOTIFICATION_PAGES[role];
 
@@ -36,7 +37,7 @@ export default function Navbar({ onMenuClick, onLogout }) {
         <button
           type="button"
           onClick={onMenuClick}
-          aria-label="Open menu"
+          aria-label={t('openMenu', 'Open menu')}
           className={cx(
             '-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-700 hover:bg-slate-100',
             focusRing,
@@ -46,10 +47,13 @@ export default function Navbar({ onMenuClick, onLogout }) {
             <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
           </svg>
         </button>
-        <span className="truncate text-base font-semibold text-slate-900">University Clearance</span>
+        <span className="truncate text-base font-semibold text-slate-900">
+          {t('appName', 'University Clearance')}
+        </span>
       </div>
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <LanguageMenu />
         <VerifyMenu />
         {bell && <NotificationBell viewAllTo={bell.viewAllTo} clearancePath={bell.clearancePath} />}
         <UserMenu

@@ -1,5 +1,6 @@
 import Avatar from './ui/Avatar';
 import Dropdown, { DropdownItem } from './ui/Dropdown';
+import { useLanguage } from '../hooks/useLanguage';
 
 const ROLE_LABELS = {
   STUDENT: 'Student',
@@ -14,12 +15,14 @@ const PROFILE_PATHS = {
 };
 
 export default function UserMenu({ name, universityId, role, onLogout }) {
-  const displayName = name || universityId || 'Account';
+  const { t } = useLanguage();
+  const displayName = name || universityId || t('account', 'Account');
   const profilePath = PROFILE_PATHS[role];
+  const roleLabel = t(`role_${role}`, ROLE_LABELS[role] ?? role);
 
   return (
     <Dropdown
-      label="Account menu"
+      label={t('accountMenu', 'Account menu')}
       buttonClassName="flex items-center gap-2 rounded-full p-1 hover:bg-slate-100 sm:pr-3"
       trigger={
         <>
@@ -43,15 +46,15 @@ export default function UserMenu({ name, universityId, role, onLogout }) {
       <div className="border-b border-slate-100 px-4 py-3">
         <p className="truncate text-sm font-medium text-slate-900">{displayName}</p>
         <p className="text-xs text-slate-500">
-          {ROLE_LABELS[role] ?? role}
+          {roleLabel}
           {universityId ? ` · ${universityId}` : ''}
         </p>
       </div>
 
       <div className="py-1">
-        {profilePath && <DropdownItem to={profilePath}>My profile</DropdownItem>}
+        {profilePath && <DropdownItem to={profilePath}>{t('myProfile', 'My profile')}</DropdownItem>}
         <DropdownItem tone="danger" onClick={onLogout}>
-          Log out
+          {t('logout', 'Log out')}
         </DropdownItem>
       </div>
     </Dropdown>

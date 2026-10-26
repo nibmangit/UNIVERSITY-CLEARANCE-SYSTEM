@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import Input from './ui/Input';
+import { useLanguage } from '../hooks/useLanguage';
 import { formatCode, isCompleteCode } from '../utils/certificateCode';
 
 // The panel is only mounted while open, so the box is empty every time it opens.
 function VerifyPanel({ close }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
 
@@ -27,12 +29,12 @@ function VerifyPanel({ close }) {
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-3 p-4">
       <div>
-        <p className="text-sm font-semibold text-slate-900">Verify a certificate</p>
-        <p className="mt-0.5 text-sm text-slate-600">Enter the code printed under the QR code.</p>
+        <p className="text-sm font-semibold text-slate-900">{t('verifyCertificate', 'Verify a certificate')}</p>
+        <p className="mt-0.5 text-sm text-slate-600">{t('verifyCodeDesc', 'Enter the code printed under the QR code.')}</p>
       </div>
 
       <Input
-        label="Verification code"
+        label={t('verificationCode', 'Verification code')}
         placeholder="XXXX-XXXX-XXXX"
         autoFocus
         autoComplete="off"
@@ -45,17 +47,19 @@ function VerifyPanel({ close }) {
       />
 
       <Button type="submit" fullWidth>
-        Verify
+        {t('verifyButton', 'Verify')}
       </Button>
     </form>
   );
 }
 
 export default function VerifyMenu() {
+  const { t } = useLanguage();
+
   return (
     <Dropdown
-      label="Verify a certificate"
-      title="Verify a certificate"
+      label={t('verifyCertificate', 'Verify a certificate')}
+      title={t('verifyCertificate', 'Verify a certificate')}
       fullWidthOnMobile
       buttonClassName="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900"
       panelClassName="sm:w-80"

@@ -6,15 +6,18 @@ import './index.css';
 import App from './App.jsx';
 import AuthProvider from './context/AuthProvider.jsx';
 import ToastProvider from './context/ToastProvider.jsx';
+import LanguageProvider from './context/LanguageProvider.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   </StrictMode>,
 );
