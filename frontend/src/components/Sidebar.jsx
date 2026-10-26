@@ -2,39 +2,40 @@ import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cx, focusRing } from './ui/styles';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 
 const NAV_LINKS = {
   STUDENT: [
-    { label: 'Dashboard', path: '/student', end: true },
-    { label: 'Clearance', path: '/student/clearance' },
-    { label: 'History', path: '/student/history' },
-    { label: 'Notifications', path: '/student/notifications' },
-    { label: 'Profile', path: '/student/profile' }, 
+    { key: 'nav_dashboard', defaultLabel: 'Dashboard', path: '/student', end: true },
+    { key: 'nav_clearance', defaultLabel: 'Clearance', path: '/student/clearance' },
+    { key: 'nav_history', defaultLabel: 'History', path: '/student/history' },
+    { key: 'nav_notifications', defaultLabel: 'Notifications', path: '/student/notifications' },
+    { key: 'nav_profile', defaultLabel: 'Profile', path: '/student/profile' },
   ],
   OFFICER: [
-    { label: 'Dashboard', path: '/officer', end: true },
-    { label: 'Clearances', path: '/officer/clearances' },
-    { label: 'History', path: '/officer/history' },
-    { label: 'Issues', path: '/officer/issues' },
-    { label: 'Notifications', path: '/officer/notifications' }, 
+    { key: 'nav_dashboard', defaultLabel: 'Dashboard', path: '/officer', end: true },
+    { key: 'nav_clearances', defaultLabel: 'Clearances', path: '/officer/clearances' },
+    { key: 'nav_history', defaultLabel: 'History', path: '/officer/history' },
+    { key: 'nav_issues', defaultLabel: 'Issues', path: '/officer/issues' },
+    { key: 'nav_notifications', defaultLabel: 'Notifications', path: '/officer/notifications' },
   ],
   REGISTRAR: [
-    { label: 'Dashboard', path: '/registrar', end: true },
-    { label: 'Students', path: '/registrar/students' },
-    { label: 'Clearances', path: '/registrar/clearances' },
-    { label: 'Issues', path: '/registrar/issues' },
-    { label: 'Completed', path: '/registrar/completed' },
-    { label: 'Notifications', path: '/registrar/notifications' }, 
+    { key: 'nav_dashboard', defaultLabel: 'Dashboard', path: '/registrar', end: true },
+    { key: 'nav_students', defaultLabel: 'Students', path: '/registrar/students' },
+    { key: 'nav_clearances', defaultLabel: 'Clearances', path: '/registrar/clearances' },
+    { key: 'nav_issues', defaultLabel: 'Issues', path: '/registrar/issues' },
+    { key: 'nav_completed', defaultLabel: 'Completed', path: '/registrar/completed' },
+    { key: 'nav_notifications', defaultLabel: 'Notifications', path: '/registrar/notifications' },
   ],
   ADMIN: [
-    { label: 'Dashboard', path: '/admin', end: true },
-    { label: 'Activity log', path: '/admin/logs' }, 
+    { key: 'nav_dashboard', defaultLabel: 'Dashboard', path: '/admin', end: true },
+    { key: 'nav_activityLog', defaultLabel: 'Activity log', path: '/admin/logs' },
   ],
 };
 
-
 function Sidebar({ open = false, onClose, onLogout }) {
   const { role } = useAuth();
+  const { t } = useLanguage();
   const links = NAV_LINKS[role] ?? [];
 
   useEffect(() => {
@@ -64,11 +65,11 @@ function Sidebar({ open = false, onClose, onLogout }) {
         )}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <h1 className="text-lg font-semibold text-slate-900">University Clearance</h1>
+          <h1 className="text-lg font-semibold text-slate-900">{t('appName', 'University Clearance')}</h1>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={t('closeMenu', 'Close menu')}
             className={cx(
               '-mr-2 flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 lg:hidden',
               focusRing,
@@ -95,7 +96,7 @@ function Sidebar({ open = false, onClose, onLogout }) {
                 )
               }
             >
-              {link.label}
+              {t(link.key, link.defaultLabel)}
             </NavLink>
           ))}
         </nav>
@@ -109,7 +110,7 @@ function Sidebar({ open = false, onClose, onLogout }) {
               focusRing,
             )}
           >
-            Log out
+            {t('logout', 'Log out')}
           </button>
         </div>
       </aside>

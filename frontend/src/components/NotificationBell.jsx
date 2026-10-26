@@ -5,12 +5,14 @@ import Dropdown from './ui/Dropdown';
 import { SkeletonText } from './ui/Skeleton';
 import { cx, focusRing } from './ui/styles';
 import { useApi } from '../hooks/useApi';
+import { useLanguage } from '../hooks/useLanguage';
 import { notificationService, onNotificationChange } from '../services/notificationService';
 import { timeAgo } from '../utils/format';
 
 const POLL_MS = 60_000;
 
 function BellPanel({ close, viewAllTo, clearancePath }) {
+  const { t } = useLanguage();
   const { data, loading, error, reload } = useApi(notificationService.list);
   const items = (data ?? []).slice(0, 5);
 
@@ -64,7 +66,7 @@ function BellPanel({ close, viewAllTo, clearancePath }) {
       </div>
     );
   } else if (items.length === 0) {
-    body = <p className="px-4 py-6 text-center text-sm text-slate-600">You're all caught up.</p>;
+    body = <p className="px-4 py-6 text-center text-sm text-slate-600">{t('allCaughtUp', "You're all caught up.")}</p>;
   } else {
     body = <ul className="divide-y divide-slate-100">{items.map(renderItem)}</ul>;
   }
@@ -72,9 +74,9 @@ function BellPanel({ close, viewAllTo, clearancePath }) {
   return (
     <>
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <p className="text-sm font-semibold text-slate-900">Notifications</p>
+        <p className="text-sm font-semibold text-slate-900">{t('notifications', 'Notifications')}</p>
         <Link to={viewAllTo} onClick={close} className={cx('rounded text-sm font-medium text-sky-800 hover:underline', focusRing)}>
-          View all
+          {t('viewAll', 'View all')}
         </Link>
       </div>
       <div className="max-h-96 overflow-y-auto">{body}</div>
@@ -83,6 +85,7 @@ function BellPanel({ close, viewAllTo, clearancePath }) {
 }
 
 export default function NotificationBell({ viewAllTo, clearancePath }) {
+  const { t } = useLanguage();
   const [count, setCount] = useState(0);
   const { pathname } = useLocation();
 
@@ -122,7 +125,7 @@ export default function NotificationBell({ viewAllTo, clearancePath }) {
 
   return (
     <Dropdown
-      label={count > 0 ? `Notifications, ${count} unread` : 'Notifications'}
+      label={count > 0 ? `${t('notifications', 'Notifications')}, ${count} ${t('unreadCount', 'unread')}` : t('notifications', 'Notifications')}
       fullWidthOnMobile
       buttonClassName="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900"
       panelClassName="sm:w-96"
